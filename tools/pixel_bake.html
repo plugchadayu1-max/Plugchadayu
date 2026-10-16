@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Pixel bake</title>
+<style>body{background:#2b3a2b;color:#eee;font-family:Tahoma,sans-serif;padding:16px}#prev canvas{image-rendering:pixelated;background:#4a6a3a;margin:4px;vertical-align:bottom}</style>
+</head>
+<body>
+<h3>แปลงสไปรต์ทั้งหมดเป็นพิกเซลอาร์ต</h3>
+<p>เปิดผ่าน <code>tools/serve.ps1</code> ที่ http://localhost:8765/tools/pixel_bake.html — ผลลัพธ์บันทึกเป็น <code>game/pixel_sprites.js</code></p>
+<div id="log">กำลังทำงาน...</div>
+<div id="prev"></div>
+<script src="../sprites.js"></script>
+<script src="../kaykit_sprites.js"></script>
+<script>
+'use strict';
+// ความสูงลำตัวเป้าหมาย (พิกเซลอาร์ต) ของแต่ละชีต — ชีตที่เป็นพิกเซลอยู่แล้ว (ออค) ใช้ตามเดิม
+const TARGET={kk_knight:36,kk_mage:38,kk_ranger:35,kk_rogue:34,sk_minion:33,sk_rogue:34,sk_mage:36,sk_warrior:36,sk_boss:36,goblinM:34,goblinF:34,goblinC:46};
+const log=t=>{document.getElementById('log').textContent=t};
+const load=src=>new Promise(ok=>{const i=new Image();i.onload=()=>ok(i);i.src=src});
+
+// ย่อภาพแบบนุ่ม (ลดครึ่งทีละขั้น) แล้วทำเป็นพิกเซล: ตัดโปร่งใสครึ่งๆ กลางๆ, ลดจำนวนสี, ใส่เส้นขอบเข้ม
+function pixelize(img,sx,sy,sw,sh,dw,dh){
+  let c=document.createElement('canvas'),w=sw,h=sh;c.width=w;c.height=h;c.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,w,h);
+  while(w/2>dw*1.5){const n=document.createElement('canvas');n.width=Math.ceil(w/2);n.height=Math.ceil(h/2);const x=n.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(c,0,0,n.width,n.height);c=n;w=n.width;h=n.height}
+  const o=document.createElement('canvas');o.width=dw+2;o.height=dh+2;const ox=o.getContext('2d');ox.imageSmoothingQuality='high';ox.drawImage(c,1,1,dw,dh);
+  const id=ox.getImageData(0,0,o.width,o.height),d=id.data,W=o.width,H=o.height,q=v=>Math.min(255,Math.round(v/28)*28);
+  for(let i=0;i<d.length;i+=4){
+    if(d[i+3]<120){d[i+3]=0;continue}
+    // ปรับสีให้สดขึ้นเล็กน้อยแล้วลดระดับสี
+    const a=d[i+3]/255,r=d[i]/a,g=d[i+1]/a,b=d[i+2]/a,l=(r+g+b)/3;
+    d[i]=q(l+(r-l)*1.15);d[i+1]=q(l+(g-l)*1.15);d[i+2]=q(l+(b-l)*1.15);d[i+3]=255;
+  }
+  const solid=new Uint8Array(W*H);for(let p=0;p<W*H;p++)solid[p]=d[p*4+3]>0?1:0;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const p=y*W+x;if(solid[p])continue;
+    let n=-1;for(const [ox_,oy] of [[1,0],[-1,0],[0,1],[0,-1]]){const X=x+ox_,Y=y+oy;if(X>=0&&Y>=0&&X<W&&Y<H&&solid[Y*W+X]){n=Y*W+X;break}}
+    if(n>=0){d[p*4]=d[n*4]*.28|0;d[p*4+1]=d[n*4+1]*.25|0;d[p*4+2]=d[n*4+2]*.3|0;d[p*4+3]=255}
+  }
+  ox.putImageData(id,0,0);return o;
+}
+
+(async()=>{
+  const SP=window.SPRITES||{},out={};
+  for(const [key,m] of Object.entries(SP)){
+    log('แปลง '+key);
+    const img=await load(m.img),total=m.cols*m.rows;
+    if(m.pixel){ // ออค: เป็นพิกเซลอยู่แล้ว
+      out[key]=Object.assign({},m);continue}
+    const s=(TARGET[key]||34)/m.body,dw=Math.max(1,Math.round(m.cw*s)),dh=Math.max(1,Math.round(m.ch*s)),cw=dw+2,ch=dh+2;
+    let used=0;for(const a of Object.values(m.anims))for(const l of Object.values(a))for(const i of l)used=Math.max(used,i+1);
+    const cols=Math.min(used,Math.floor(2048/cw)),rows=Math.ceil(used/cols);
+    const at=document.createElement('canvas');at.width=cols*cw;at.height=rows*ch;const ax=at.getContext('2d');
+    for(let i=0;i<used;i++){
+      const f=pixelize(img,(i%m.cols)*m.cw,Math.floor(i/m.cols)*m.ch,m.cw,m.ch,dw,dh);
+      ax.drawImage(f,(i%cols)*cw,Math.floor(i/cols)*ch);
+    }
+    out[key]={img:at.toDataURL('image/png'),cw,ch,cols,rows,pixel:true,
+      foot:+((m.foot*m.ch*s+1)/ch).toFixed(4),cx:+((m.cx*m.cw*s+1)/cw).toFixed(4),body:+(m.body*s).toFixed(1),anims:m.anims};
+    // ตัวอย่าง: เฟรมแรกของแต่ละท่า ขยาย 3 เท่า
+    const pv=document.createElement('canvas');pv.width=cw*3;pv.height=ch*3;const px=pv.getContext('2d');px.imageSmoothingEnabled=false;
+    const first=Object.values(m.anims.idle)[2]?.[0]??0;px.drawImage(at,(first%cols)*cw,Math.floor(first/cols)*ch,cw,ch,0,0,cw*3,ch*3);
+    pv.title=key;document.getElementById('prev').appendChild(pv);
+  }
+  const js='// สร้างอัตโนมัติจาก tools/pixel_bake.html — อย่าแก้ไฟล์นี้ด้วยมือ\nwindow.SPRITES='+JSON.stringify(out)+';\n';
+  const res=await fetch('/save/pixel_sprites.js',{method:'POST',body:js});
+  log(res.ok?'เสร็จแล้ว ✔ บันทึก game/pixel_sprites.js ('+Math.round(js.length/1024)+' KB)':'บันทึกไม่สำเร็จ (ต้องเปิดผ่าน serve.ps1)');
+  document.title=res.ok?'PIXEL DONE':'PIXEL FAILED';
+})().catch(e=>{log('ผิดพลาด: '+e.message);document.title='PIXEL FAILED';console.error(e)});
+</script>
+</body>
+</html>

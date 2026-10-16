@@ -1,0 +1,114 @@
+﻿<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Bake KayKit sprites</title>
+<style>body{background:#2b3a2b;color:#eee;font-family:Tahoma,sans-serif;padding:16px}#prev img{max-width:100%;background:#4a6a3a;margin:6px 0;display:block}</style>
+</head>
+<body>
+<h3>แปลงโมเดล KayKit 3D เป็นสไปรต์ 2D</h3>
+<p>เปิดผ่าน <code>tools/serve.ps1</code> ที่ http://localhost:8765/tools/bake.html แล้วรอจนขึ้นว่าเสร็จ ไฟล์จะถูกบันทึกเป็น <code>game/kaykit_sprites.js</code></p>
+<div id="log">กำลังโหลด...</div>
+<div id="prev"></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/utils/SkeletonUtils.js"></script>
+<script src="models.js"></script>
+<script src="../sprites.js"></script>
+<script>
+'use strict';
+// ตัวละครที่จะแปลง: model, อาวุธมือขวา/ซ้าย, สีย้อม
+const BAKE={
+  kk_knight:{model:'Knight',weapons:{r:'sword_1handed',l:'shield_badge_color'}},
+  kk_mage:{model:'Mage',weapons:{r:'staff'}},
+  kk_ranger:{model:'Ranger',weapons:{l:'bow_withString'}},
+  kk_rogue:{model:'Rogue',weapons:{r:'dagger',l:'dagger'}},
+  sk_minion:{model:'Skeleton_Minion',weapons:{r:'Skeleton_Blade'}},
+  sk_rogue:{model:'Skeleton_Rogue',weapons:{r:'Skeleton_Axe'}},
+  sk_mage:{model:'Skeleton_Mage',weapons:{r:'Skeleton_Staff'}},
+  sk_warrior:{model:'Skeleton_Warrior',weapons:{r:'Skeleton_Blade',l:'Skeleton_Shield_Small_A'}},
+  sk_boss:{model:'Skeleton_Warrior',weapons:{r:'Skeleton_Axe',l:'Skeleton_Shield_Large_A'},tint:'#ff8f8f'}
+};
+// ท่า: clip, จำนวนเฟรม, loop (เฟรมกระจายเต็มวง) หรือ once (เฟรมสุดท้าย = ท่าจบ)
+const ANIMS=[['idle','Idle_A',4,true],['walk','Running_A',8,true],['attack','Throw',6,false],['hurt','Hit_A',3,false],['death','Death_A',5,false]];
+// 8 ทิศบนจอ: e se s sw w nw n ne  (x ขวา, y ลง)
+const DIRS=[['e',1,0],['se',1,1],['s',0,1],['sw',-1,1],['w',-1,0],['nw',-1,-1],['n',0,-1],['ne',1,-1]];
+const CELL=160,HEIGHT=2.2,ELEV=35*Math.PI/180;
+
+const log=t=>{document.getElementById('log').textContent=t};
+function b64ToBuf(b){const s=atob(b),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u.buffer}
+
+(async()=>{
+  const loader=new THREE.GLTFLoader(),parse=d=>new Promise((res,rej)=>loader.parse(d,'',res,rej));
+  const TPL={},CLIPS={},WEAP={};
+  for(const [k,b] of Object.entries(KAYKIT_GLB)){const g=await parse(b64ToBuf(b));if(k.startsWith('Anim_'))g.animations.forEach(c=>CLIPS[c.name]=c);else TPL[k]=g.scene}
+  for(const [k,j] of Object.entries(KAYKIT_GLTF)){WEAP[k]=(await parse(j)).scene}
+
+  const r=new THREE.WebGLRenderer({alpha:true,antialias:true,preserveDrawingBuffer:true});
+  r.outputEncoding=THREE.sRGBEncoding;r.setPixelRatio(1);r.setSize(CELL,CELL);r.setClearColor(0,0);
+  const scene=new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xfff6e8,0x5a6b4a,.95));
+  const sun=new THREE.DirectionalLight(0xffffff,.95);sun.position.set(-3,6,4);scene.add(sun);
+  const half=1.75,cam=new THREE.OrthographicCamera(-half,half,half,-half,.1,50);
+  cam.position.set(0,1.05+10*Math.sin(ELEV),10*Math.cos(ELEV));cam.lookAt(0,1.05,0);cam.updateMatrixWorld();
+  const toPx=v=>{const p=v.clone().project(cam);return{x:(p.x+1)/2*CELL,y:(1-p.y)/2*CELL}};
+  const foot=toPx(new THREE.Vector3(0,0,0)),head=toPx(new THREE.Vector3(0,HEIGHT,0));
+
+  const out={};
+  for(const [key,def] of Object.entries(BAKE)){
+    log('กำลังแปลง '+key+' ...');
+    const model=THREE.SkeletonUtils.clone(TPL[def.model]);
+    model.traverse(o=>{if(o.isMesh){o.frustumCulled=false;if(def.tint){o.material=o.material.clone();o.material.color.set(def.tint)}}});
+    for(const [side,w] of Object.entries(def.weapons)){const bone=model.getObjectByName(side==='r'?'handslotr':'handslotl');const m=WEAP[w].clone();if(def.tint)m.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.color.set(def.tint)}});bone.add(m)}
+    const h=new THREE.Box3().setFromObject(TPL[def.model]).getSize(new THREE.Vector3()).y;
+    model.scale.setScalar(HEIGHT/h);scene.add(model);
+    const mixer=new THREE.AnimationMixer(model);
+    const total=ANIMS.reduce((s,a)=>s+a[2],0)*DIRS.length,cols=16,rows=Math.ceil(total/cols);
+    const atlas=document.createElement('canvas');atlas.width=cols*CELL;atlas.height=rows*CELL;const ac=atlas.getContext('2d');
+    const anims={};let idx=0;
+    for(const [name,clipName,n,loop] of ANIMS){
+      const clip=CLIPS[clipName];anims[name]={};
+      mixer.stopAllAction();const act=mixer.clipAction(clip);act.reset();act.play();
+      for(const [dn,dx,dy] of DIRS){
+        anims[name][dn]=[];model.rotation.y=Math.atan2(dx,dy);
+        for(let k=0;k<n;k++){
+          const t=loop?k/n*clip.duration:k/Math.max(1,n-1)*clip.duration*.999;
+          mixer.setTime(t);model.updateMatrixWorld(true);
+          r.render(scene,cam);
+          ac.drawImage(r.domElement,(idx%cols)*CELL,Math.floor(idx/cols)*CELL);
+          anims[name][dn].push(idx);idx++;
+        }
+      }
+      mixer.uncacheAction(clip);
+    }
+    scene.remove(model);
+    // ตัดขอบว่าง: หากรอบที่ครอบทุกเฟรม แล้วสร้างแอตลาสใหม่ที่ช่องเล็กลง
+    const px=ac.getImageData(0,0,atlas.width,atlas.height).data;let x0=CELL,y0=CELL,x1=0,y1=0;
+    for(let i=0;i<idx;i++){const ox=(i%cols)*CELL,oy=Math.floor(i/cols)*CELL;
+      for(let y=0;y<CELL;y++)for(let x=0;x<CELL;x++){if(px[((oy+y)*atlas.width+ox+x)*4+3]>20){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}}}
+    x0=Math.max(0,x0-1);y0=Math.max(0,y0-1);const cw=Math.min(CELL,x1+2)-x0,ch=Math.min(CELL,y1+2)-y0;
+    const cc=Math.floor(4096/cw),cr=Math.ceil(idx/cc),small=document.createElement('canvas');small.width=cc*cw;small.height=cr*ch;const sc=small.getContext('2d');
+    for(let i=0;i<idx;i++)sc.drawImage(atlas,(i%cols)*CELL+x0,Math.floor(i/cols)*CELL+y0,cw,ch,(i%cc)*cw,Math.floor(i/cc)*ch,cw,ch);
+    const url=small.toDataURL('image/webp',.9);
+    out[key]={img:url,cw,ch,cols:cc,rows:cr,pixel:false,foot:+((foot.y-y0)/ch).toFixed(4),cx:+((foot.x-x0)/cw).toFixed(4),body:+(foot.y-head.y).toFixed(1),anims};
+    const im=new Image();im.src=url;document.getElementById('prev').appendChild(im);
+  }
+  log('กำลังบันทึก...');
+  const js='// สร้างอัตโนมัติจาก tools/bake.html — อย่าแก้ไฟล์นี้ด้วยมือ\nwindow.SPRITES=Object.assign(window.SPRITES||{},'+JSON.stringify(out)+');\n';
+  let res=await fetch('/save/kaykit_sprites.js',{method:'POST',body:js});
+  // บีบอัดสไปรต์กอบลินใน sprites.js (PNG จาก build_sprites.ps1) เป็น WebP — พิกเซลอาร์ตคงเป็น PNG
+  const SP=window.SPRITES||{};let changed=false;
+  for(const m of Object.values(SP)){
+    if(m.pixel||!m.img.startsWith('data:image/png'))continue;
+    const im=await new Promise(ok=>{const i=new Image();i.onload=()=>ok(i);i.src=m.img});
+    const c=document.createElement('canvas');c.width=im.width;c.height=im.height;c.getContext('2d').drawImage(im,0,0);
+    m.img=c.toDataURL('image/webp',.9);changed=true;
+  }
+  if(changed)res=await fetch('/save/sprites.js',{method:'POST',body:'// สร้างจาก tools/build_sprites.ps1 แล้วบีบอัดด้วย tools/bake.html\nwindow.SPRITES='+JSON.stringify(SP)+';\n'});
+  log(res.ok?'เสร็จแล้ว ✔ บันทึก game/kaykit_sprites.js ('+Math.round(js.length/1024)+' KB)':'บันทึกไม่สำเร็จ (ต้องเปิดผ่าน serve.ps1)');
+  document.title=res.ok?'BAKE DONE':'BAKE FAILED';
+})().catch(e=>{log('ผิดพลาด: '+e.message);document.title='BAKE FAILED';console.error(e)});
+</script>
+</body>
+</html>
+

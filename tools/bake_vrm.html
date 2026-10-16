@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Bake VRM sprites</title>
+<style>
+body{background:#232838;color:#eee;font-family:Tahoma,sans-serif;padding:16px;margin:0}
+h3{margin:0 0 6px}
+.row{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:10px 0;padding:10px;background:#2e3448;border-radius:8px}
+label{display:flex;gap:6px;align-items:center}
+input[type=number],input[type=text]{width:90px;background:#1b1f2c;color:#eee;border:1px solid #556;padding:3px 5px}
+select{background:#1b1f2c;color:#eee;border:1px solid #556;padding:3px}
+button{background:#f2c94c;border:0;padding:7px 14px;font-weight:bold;cursor:pointer;border-radius:5px}
+button.alt{background:#7fa4ff}
+#log{color:#9fd;min-height:1.2em}
+#anim{display:block;background:#4a6a3a;margin:10px 0;image-rendering:auto}
+#sheet{max-width:100%;background:#3a4258;display:block}
+.small{font-size:12px;color:#aab}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+  "@pixiv/three-vrm":"https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.1.6/lib/three-vrm.module.min.js"
+}}
+</script>
+</head>
+<body>
+<h3>แปลงโมเดลอนิเมะ (.vrm) เป็นสไปรต์ 2D: idle / walk / attack × 4 ทิศ × 5 เฟรม</h3>
+<p class="small">เปิดผ่าน <code>tools/serve.ps1</code> แล้วเข้า <code>/tools/bake_vrm.html</code> • สร้างโมเดลได้ฟรีด้วย VRoid Studio แล้ว Export เป็น VRM •
+ท่าทางสร้างด้วยโค้ด (ไม่ต้องใช้ไฟล์แอนิเมชัน) • กด "บันทึกลงเกม" แล้วจะได้ไฟล์ <code>game/&lt;ชื่อ&gt;.js</code></p>
+<div class="row">
+  <label>โมเดล <select id="model">
+    <option value="chibi:warrior">นักรบ (chibi สร้างด้วยโค้ด)</option><option value="chibi:mage">จอมเวท (chibi สร้างด้วยโค้ด)</option>
+    <option value="chibi:archer">นักธนู (chibi สร้างด้วยโค้ด)</option><option value="chibi:rogue">โจร สาวปีศาจ (chibi สร้างด้วยโค้ด)</option>
+    <option value="vrm:vrm/sample.vrm">ไฟล์ตัวอย่าง vrm/sample.vrm</option></select></label>
+  <label>หรือไฟล์ VRM <input type="file" id="file" accept=".vrm"></label>
+  <span class="small" id="src"></span>
+</div>
+<div class="row">
+  <label>ชื่อสไปรต์ <input type="text" id="key" value="hd_mage"></label>
+  <label>อาวุธ <select id="weapon">
+    <option value="staff">ไม้เท้าเวท</option><option value="bow">ธนู</option>
+    <option value="spear">หอก</option><option value="sword">ดาบ</option><option value="none">ไม่มี</option></select></label>
+  <label>หัวโต (chibi) <input type="range" id="head" min="1" max="2" step="0.05" value="1.55"><span id="headV"></span></label>
+  <label>ขาสั้น <input type="range" id="leg" min="0.6" max="1" step="0.05" value="0.8"><span id="legV"></span></label>
+  <label><input type="checkbox" id="outline" checked> เส้นขอบ</label>
+  <label title="เฉพาะหอก: skill1 แทงหนัก, skill2 ควงครึ่งรอบ, skill3 กระโดดทุบ"><input type="checkbox" id="skills"> ท่าสกิลหอก</label>
+  <label>ความสูงในเกม <input type="number" id="body" value="68"> พิกเซลอาร์ต</label>
+</div>
+<div class="row">
+  <button class="alt" id="bPrev">แสดงตัวอย่าง</button>
+  <button id="bSave">บันทึกลงเกม</button>
+  <span id="log">กำลังโหลด...</span>
+</div>
+<canvas id="anim" width="1024" height="256"></canvas>
+<img id="sheet">
+
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {VRMLoaderPlugin, VRMUtils} from '@pixiv/three-vrm';
+import {buildChibi, CHIBI} from './chibi_models.js';
+
+const CELL=256, COLS=5, FPS=30, ELEV=30*Math.PI/180;
+const DIRS=[['back',Math.PI],['left',-Math.PI/2],['front',0],['right',Math.PI/2]];   // ลำดับแถวเหมือน build_grid.ps1
+const animList=()=>['idle','walk','attack'].concat($('skills').checked&&$('weapon').value==='spear'?['skill1','skill2','skill3']:[]);
+const $=id=>document.getElementById(id), log=t=>{$('log').textContent=t};
+const V=(x,y,z)=>new THREE.Vector3(x,y,z).normalize();
+
+/* ---------- ฉาก ---------- */
+const R=new THREE.WebGLRenderer({alpha:true,antialias:true,preserveDrawingBuffer:true});
+R.setPixelRatio(1);R.setSize(CELL,CELL);R.setClearColor(0,0);R.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene();
+scene.add(new THREE.AmbientLight(0xffffff,1.5));
+const sun=new THREE.DirectionalLight(0xffffff,1.7);sun.position.set(-1.2,3,2.2);scene.add(sun);
+const cam=new THREE.OrthographicCamera(-1,1,1,-1,.1,50);
+const root=new THREE.Group();scene.add(root);          // หมุนทั้งตัวละครและอาวุธตามทิศ
+
+let vrm=null,srcName='vrm/sample.vrm',H=1.5,WS=1,W={};   // WS = ขนาดอาวุธ/เอฟเฟกต์เทียบตัวละครสูง 1.55
+
+/* ---------- อาวุธ (แกน +Y = ทิศอาวุธ, จุดจับที่ (0,0,0)) ---------- */
+const toon=(c,e=0)=>new THREE.MeshToonMaterial({color:c,emissive:e?c:0,emissiveIntensity:e});
+function glowTex(){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),gr=g.createRadialGradient(32,32,2,32,32,32);
+  gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.3,'rgba(150,230,255,.9)');gr.addColorStop(1,'rgba(80,160,255,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t}
+const GLOW=glowTex();
+function mesh(geo,m,x=0,y=0,z=0){const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);return o}
+function makeWeapon(type){
+  const g=new THREE.Group();let tip=0;
+  if(type==='staff'){
+    g.add(mesh(new THREE.CylinderGeometry(.022,.028,1.5,10),toon(0x7a4a28),0,.2,0));
+    const ring=mesh(new THREE.TorusGeometry(.075,.016,8,20),toon(0xe8c050,.15),0,1.0,0);g.add(ring);
+    g.add(mesh(new THREE.OctahedronGeometry(.09),toon(0x8fe6ff,.7),0,1.1,0));tip=1.1;
+  }else if(type==='spear'){
+    g.add(mesh(new THREE.CylinderGeometry(.02,.022,1.9,8),toon(0x4a2a26),0,.35,0));
+    g.add(mesh(new THREE.BoxGeometry(.16,.03,.03),toon(0x222222),0,1.3,0));
+    g.add(mesh(new THREE.ConeGeometry(.055,.3,4),toon(0xff7020,.25),0,1.46,0));tip=1.6;
+  }else if(type==='sword'){
+    g.add(mesh(new THREE.CylinderGeometry(.022,.022,.2,8),toon(0x553322),0,0,0));
+    g.add(mesh(new THREE.BoxGeometry(.24,.035,.05),toon(0xe0b040),0,.11,0));
+    g.add(mesh(new THREE.BoxGeometry(.07,.8,.016),toon(0xdfe6ee,.1),0,.52,0));
+    g.add(mesh(new THREE.ConeGeometry(.05,.1,4),toon(0xdfe6ee,.1),0,.97,0));tip=1.0;
+  }else if(type==='bow'){
+    const pts=[];for(let k=0;k<=12;k++){const y=-.55+k*1.1/12;pts.push(new THREE.Vector3(0,y,-.14*(y/.55)**2))}
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),40,.018,6),toon(0x9a6232)));
+    g.add(mesh(new THREE.CylinderGeometry(.026,.026,.12,8),toon(0x4a3020),0,0,0));
+    const sg=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,.55,-.14),new THREE.Vector3(0,0,-.14),new THREE.Vector3(0,-.55,-.14)]);
+    g.userData.string=new THREE.Line(sg,new THREE.LineBasicMaterial({color:0xf2eedd}));g.add(g.userData.string);
+  }
+  g.userData.tip=tip;return g;
+}
+function makeArrow(){const g=new THREE.Group();
+  g.add(mesh(new THREE.CylinderGeometry(.008,.008,.72,6),toon(0xd8b880),0,.36,0));
+  g.add(mesh(new THREE.ConeGeometry(.025,.07,4),toon(0xc8ccd8),0,.75,0));
+  g.add(mesh(new THREE.BoxGeometry(.004,.1,.05),toon(0xd84030),0,.05,0));return g}
+function fireTex(){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),gr=g.createRadialGradient(32,32,2,32,32,32);
+  gr.addColorStop(0,'rgba(255,250,220,1)');gr.addColorStop(.3,'rgba(255,150,40,.95)');gr.addColorStop(.7,'rgba(230,60,20,.55)');gr.addColorStop(1,'rgba(200,30,10,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t}
+const FIRE=fireTex();
+function makeFire(){return new THREE.Sprite(new THREE.SpriteMaterial({map:FIRE,transparent:true,depthWrite:false}))}
+function makeArc(){const m=new THREE.Mesh(new THREE.RingGeometry(.6,.75,8),new THREE.MeshBasicMaterial({color:0xff8a30,transparent:true,opacity:.75,side:THREE.DoubleSide,depthWrite:false}));m.rotation.x=-Math.PI/2;return m}
+function makeShock(){const g=new THREE.Group(),mt=new THREE.MeshBasicMaterial({color:0xff7a20,transparent:true,opacity:1,side:THREE.DoubleSide,depthWrite:false});
+  const r=new THREE.Mesh(new THREE.RingGeometry(.28,.35,40),mt);r.rotation.x=-Math.PI/2;r.position.y=.01;g.add(r);
+  for(let k=0;k<8;k++){const a=k/8*Math.PI*2,f=new THREE.Mesh(new THREE.ConeGeometry(.035,.16,6),mt);f.position.set(Math.cos(a)*.32,.08,Math.sin(a)*.32);g.add(f)}
+  g.material=mt;return g}
+function makeOrb(){const g=new THREE.Group();g.add(mesh(new THREE.SphereGeometry(.07,16,12),toon(0xc8f4ff,1)));
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW,transparent:true,depthWrite:false}));s.scale.setScalar(.42);g.add(s);return g}
+
+/* ---------- โหลดโมเดล ---------- */
+async function loadVRM(url,name){
+  log('กำลังโหลด '+name+' ...');
+  const loader=new GLTFLoader();loader.register(p=>new VRMLoaderPlugin(p));
+  const gltf=await loader.loadAsync(url);const v=gltf.userData.vrm;
+  if(!v)throw new Error('ไฟล์นี้ไม่ใช่ VRM');
+  VRMUtils.removeUnnecessaryVertices(gltf.scene);
+  (VRMUtils.combineSkeletons||VRMUtils.removeUnnecessaryJoints)?.(gltf.scene);
+  VRMUtils.rotateVRM0(v);
+  setupModel(v,name);
+}
+function loadChibi(cls){
+  const v=buildChibi(cls),D=CHIBI[cls];
+  setupModel(v,'chibi:'+cls);
+  $('weapon').value=D.weapon;$('key').value='hd_'+cls;$('head').value=1;$('leg').value=1;$('skills').checked=D.weapon==='spear';
+  for(const id of ['head','leg'])$(id).oninput();
+}
+function setupModel(v,name){
+  v.scene.traverse(o=>{o.frustumCulled=false});
+  if(vrm){root.remove(vrm.scene);VRMUtils.deepDispose(vrm.scene)}
+  vrm=v;srcName=name;root.add(v.scene);
+  v.humanoid.resetNormalizedPose();v.update(0);v.scene.updateMatrixWorld(true);
+  const box=new THREE.Box3().setFromObject(v.scene);
+  const hy=bone('head').getWorldPosition(new THREE.Vector3()).y;
+  vrm.userData={H0:box.max.y-box.min.y,top0:box.max.y-hy,minY:box.min.y,
+    ankle0:Math.min(rawY('leftFoot'),rawY('rightFoot'))-box.min.y};
+  $('src').textContent='โมเดล: '+name;log('โหลดแล้ว: '+name);
+}
+const bone=n=>vrm.humanoid.getRawBoneNode(n);
+const nb=n=>vrm.humanoid.getNormalizedBoneNode(n);
+const rawY=n=>{const b=bone(n);return b?b.getWorldPosition(new THREE.Vector3()).y:0};
+
+function applyChibi(){
+  const hs=+$('head').value,ls=+$('leg').value;
+  const set=(n,s)=>{const b=bone(n);if(b)b.scale.setScalar(s)};
+  set('head',hs);set('leftUpperLeg',ls);set('rightUpperLeg',ls);
+  vrm.humanoid.resetNormalizedPose();vrm.scene.position.y=0;vrm.update(0);vrm.scene.updateMatrixWorld(true);
+  const u=vrm.userData;
+  vrm.userData.ankleT=u.ankle0*ls;                                   // ความสูงข้อเท้าเหนือพื้นหลังย่อขา
+  const hy=rawY('head')-Math.min(rawY('leftFoot'),rawY('rightFoot'))+u.ankleT;
+  H=hy+u.top0*hs;                                                     // ความสูงทั้งตัวโดยประมาณ
+  const half=H*.66,cy=H*.5;
+  cam.left=-half;cam.right=half;cam.top=half;cam.bottom=-half;cam.updateProjectionMatrix();
+  cam.position.set(0,cy+10*Math.sin(ELEV),10*Math.cos(ELEV));cam.lookAt(0,cy,0);cam.updateMatrixWorld();
+}
+
+/* ---------- ท่าทาง (พิกัดลำตัว: +Z หน้า, +Y บน, +X ซ้ายของตัวละคร) ---------- */
+const REST={leftUpperArm:V(1,0,0),leftLowerArm:V(1,0,0),rightUpperArm:V(-1,0,0),rightLowerArm:V(-1,0,0)};
+const ARMS=['leftUpperArm','leftLowerArm','rightUpperArm','rightLowerArm'];
+const RELAX={leftUpperArm:[.33,-1,.06],leftLowerArm:[.22,-1,.28],rightUpperArm:[-.33,-1,.06],rightLowerArm:[-.22,-1,.28]};
+const HOLD={   // ท่าถืออาวุธตอนยืน/เดิน
+  none:{aim:{},w:null},
+  staff:{aim:{rightUpperArm:[-.32,-1,.22],rightLowerArm:[-.08,-.4,1]},w:{dir:[0,1,.06],front:[0,0,1]}},
+  spear:{aim:{rightUpperArm:[-.32,-1,.22],rightLowerArm:[-.08,-.4,1]},w:{dir:[0,1,.08],front:[0,0,1]}},
+  sword:{aim:{rightUpperArm:[-.3,-1,.15],rightLowerArm:[-.12,-.7,.7]},w:{dir:[0,.35,1],front:[0,1,0]}},
+  bow:{aim:{leftUpperArm:[.33,-1,.14],leftLowerArm:[.14,-.6,.8]},w:{dir:[0,1,.12],front:[0,0,1]},hand:'left'},
+};
+const ATK={   // คีย์เฟรมโจมตี 5 ท่า
+  staff:[
+    {aim:{rightUpperArm:[-.45,-.7,.6],rightLowerArm:[-.1,.1,1]},w:{dir:[0,1,.25]},sp:.02},
+    {aim:{rightUpperArm:[-.4,.9,.1],rightLowerArm:[-.15,1,-.1]},w:{dir:[0,1,-.35]},sp:-.08,orb:['tip',.45]},
+    {aim:{rightUpperArm:[-.2,.15,1],rightLowerArm:[-.05,.2,1],leftUpperArm:[.35,-.9,.3]},w:{dir:[0,.45,1]},sp:.12,orb:['tip',.9]},
+    {aim:{rightUpperArm:[-.15,.05,1],rightLowerArm:[0,.05,1],leftUpperArm:[.35,-.9,.3]},w:{dir:[0,.25,1]},sp:.15,orb:['fly',1]},
+    {aim:{rightUpperArm:[-.4,-.8,.55],rightLowerArm:[-.1,-.1,1]},w:{dir:[0,1,.3]},sp:.04}],
+  spear:[
+    {aim:{rightUpperArm:[-.45,-.75,.5],rightLowerArm:[-.05,-.1,1]},w:{dir:[0,.05,1],front:[0,1,0]},sp:.03},
+    {aim:{rightUpperArm:[-.55,-.5,-.5],rightLowerArm:[-.1,0,1]},w:{dir:[0,.08,1],front:[0,1,0]},sp:-.06},
+    {aim:{rightUpperArm:[-.15,-.05,1],rightLowerArm:[0,-.02,1]},w:{dir:[0,.02,1],front:[0,1,0]},sp:.16},
+    {aim:{rightUpperArm:[-.1,-.05,1],rightLowerArm:[0,-.02,1]},w:{dir:[0,.02,1],front:[0,1,0]},sp:.22},
+    {aim:{rightUpperArm:[-.4,-.8,.5],rightLowerArm:[-.05,-.2,1]},w:{dir:[0,.3,1],front:[0,1,0]},sp:.05}],
+  sword:[
+    {aim:{rightUpperArm:[-.4,-.8,.5],rightLowerArm:[-.1,-.2,1]},w:{dir:[0,.4,1],front:[0,1,0]},sp:.02},
+    {aim:{rightUpperArm:[-.35,1,.15],rightLowerArm:[-.1,.7,-.6]},w:{dir:[0,.3,-1],front:[0,1,0]},sp:-.08},
+    {aim:{rightUpperArm:[-.3,.3,1],rightLowerArm:[-.05,.4,1]},w:{dir:[0,1,.6],front:[0,0,-1]},sp:.08},
+    {aim:{rightUpperArm:[.1,-.5,1],rightLowerArm:[.2,-.7,.7]},w:{dir:[.3,-.8,.5],front:[0,0,-1]},sp:.16},
+    {aim:{rightUpperArm:[-.4,-.8,.5],rightLowerArm:[-.1,-.2,1]},w:{dir:[0,.4,1],front:[0,1,0]},sp:.04}],
+  bow:[
+    {aim:{leftUpperArm:[.45,-.75,.55],leftLowerArm:[.15,-.3,1]},w:{dir:[0,1,.1]},sp:.02},
+    {aim:{leftUpperArm:[.2,0,1],leftLowerArm:[.1,0,1],rightUpperArm:[-.3,0,1],rightLowerArm:[.35,0,1]},w:{dir:[0,1,0]},arrow:'nock',sp:.03},
+    {aim:{leftUpperArm:[.2,0,1],leftLowerArm:[.1,0,1],rightUpperArm:[-1,.05,-.15],rightLowerArm:[.85,.1,.4]},w:{dir:[0,1,0]},arrow:'nock',pull:1,sp:.03},
+    {aim:{leftUpperArm:[.2,0,1],leftLowerArm:[.1,0,1],rightUpperArm:[-1,0,-.4],rightLowerArm:[-.4,.1,-1]},w:{dir:[0,1,0]},arrow:'fly',sp:.05},
+    {aim:{leftUpperArm:[.4,-.7,.55],leftLowerArm:[.15,-.3,1]},w:{dir:[0,1,.1]},sp:.02}],
+};
+ATK.none=ATK.staff.map(k=>Object.assign({},k,{w:null,orb:null}));
+// ท่าสกิลหอก: eu = มุมกระดูกขา, lift = กระโดดสูง (หน่วยเท่าตัวละครสูง 1.55), tw = บิดตัว, fx = เอฟเฟกต์
+const SPF=[0,1,0],LEG=(l,r,kl,kr)=>({leftUpperLeg:[l,0,0],rightUpperLeg:[r,0,0],leftLowerLeg:[kl,0,0],rightLowerLeg:[kr,0,0]});
+const SW=[-1.7,-.9,0,.9,1.6];
+const SK={
+  skill1:[
+    {aim:{rightUpperArm:[-.45,-.75,.5],rightLowerArm:[-.05,-.1,1]},w:{dir:[0,.05,1],front:SPF},sp:.03},
+    {aim:{rightUpperArm:[-.6,-.4,-.7],rightLowerArm:[-.1,0,1]},w:{dir:[0,.1,1],front:SPF},sp:-.12,eu:LEG(-.35,.2,.1,.1),fx:{fire:.5}},
+    {aim:{rightUpperArm:[-.1,-.02,1],rightLowerArm:[0,-.02,1]},w:{dir:[0,.02,1],front:SPF},sp:.25,eu:LEG(-.5,.35,.3,.1),fx:{fire:1.1}},
+    {aim:{rightUpperArm:[-.08,-.02,1],rightLowerArm:[0,-.02,1]},w:{dir:[0,.02,1],front:SPF},sp:.3,eu:LEG(-.55,.4,.35,.1),fx:{fire:1.5}},
+    {aim:{rightUpperArm:[-.4,-.8,.5],rightLowerArm:[-.05,-.2,1]},w:{dir:[0,.3,1],front:SPF},sp:.05}],
+  skill2:SW.map((a,i)=>({tw:a*.5,sp:.05,eu:LEG(-.2,.15,.2,.1),
+    aim:{rightUpperArm:[Math.sin(a)*.9-.25,-.3,Math.cos(a)*.9],rightLowerArm:[Math.sin(a),-.08,Math.cos(a)]},
+    w:{dir:[Math.sin(a),.04,Math.cos(a)],front:SPF},fx:i?{arc:[SW[i-1],a]}:null})),
+  skill3:[
+    {aim:{rightUpperArm:[-.4,-.6,.5],rightLowerArm:[-.1,.3,1]},w:{dir:[0,1,.2],front:[0,0,1]},sp:.15,eu:LEG(-.8,-.8,1.3,1.3)},
+    {aim:{rightUpperArm:[-.3,1,.1],rightLowerArm:[-.1,1,0],leftUpperArm:[.5,.4,.2]},w:{dir:[0,1,.1],front:[0,0,1]},sp:-.05,lift:.2,eu:LEG(-1,-.6,1.5,1.2)},
+    {aim:{rightUpperArm:[-.25,.7,.6],rightLowerArm:[0,.3,1],leftUpperArm:[.5,.3,.3]},w:{dir:[0,-.4,1],front:SPF},sp:.1,lift:.28,eu:LEG(-.9,-.9,1.4,1.4)},
+    {aim:{rightUpperArm:[-.2,-.3,1],rightLowerArm:[0,-.6,1]},w:{dir:[0,-.75,.65],front:SPF},sp:.35,eu:LEG(-.9,-.5,1.3,1),fx:{shock:[.35,1]}},
+    {aim:{rightUpperArm:[-.2,-.35,1],rightLowerArm:[0,-.6,1]},w:{dir:[0,-.75,.65],front:SPF},sp:.25,eu:LEG(-.6,-.3,.9,.6),fx:{shock:[.6,.55]}}],
+};
+
+const lerp=(a,b,u)=>a+(b-a)*u;
+const lerpA=(a,b,u)=>a.map((v,i)=>lerp(v,b[i],u));
+function poseAt(anim,weapon,p){
+  const hold=HOLD[weapon],P={aim:Object.assign({},RELAX,hold.aim),euler:{},w:hold.w&&Object.assign({front:[0,0,1]},hold.w),blink:0};
+  const free=a=>!(a in hold.aim);
+  if(anim==='idle'){
+    const s=Math.sin(p*Math.PI*2);
+    P.euler.spine=[.03+.02*s,0,0];P.euler.head=[-.02*s,0,0];
+    for(const a of ['leftUpperArm','rightUpperArm'])if(free(a))P.aim[a]=[RELAX[a][0]*(1+.08*s),-1,.06];
+    if(p>.55&&p<.65)P.blink=1;
+  }else if(anim==='walk'){
+    const s=Math.sin(p*Math.PI*2),c=Math.cos(p*Math.PI*2);
+    P.euler.leftUpperLeg=[-.62*s,0,0];P.euler.rightUpperLeg=[.62*s,0,0];
+    P.euler.leftLowerLeg=[.12+.8*Math.max(0,c),0,0];P.euler.rightLowerLeg=[.12+.8*Math.max(0,-c),0,0];
+    P.euler.spine=[.07,.08*s,0];P.euler.hips=[0,-.1*s,0];
+    if(free('leftUpperArm')){P.aim.leftUpperArm=[.3,-1,-.55*s];P.aim.leftLowerArm=[.2,-1,.45-.5*s]}
+    if(free('rightUpperArm')){P.aim.rightUpperArm=[-.3,-1,.55*s];P.aim.rightLowerArm=[-.2,-1,.45+.5*s]}
+  }else{
+    const K=anim==='attack'?ATK[weapon]:SK[anim],f=p*(K.length-1),i=Math.min(K.length-2,Math.floor(f)),u=f-i,a=K[i],b=K[i+1];
+    const ka=Object.assign({},RELAX,hold.aim,a.aim),kb=Object.assign({},RELAX,hold.aim,b.aim);
+    for(const n of ARMS)P.aim[n]=lerpA(ka[n],kb[n],u);
+    const tw=lerp(a.tw||0,b.tw||0,u);
+    P.euler.spine=[lerp(a.sp||0,b.sp||0,u),tw*.4,0];if(tw)P.euler.hips=[0,tw*.6,0];
+    for(const n of new Set([...Object.keys(a.eu||{}),...Object.keys(b.eu||{})]))P.euler[n]=lerpA((a.eu||{})[n]||[0,0,0],(b.eu||{})[n]||[0,0,0],u);
+    if(P.w&&a.w)P.w={dir:lerpA(a.w.dir,b.w.dir,u),front:a.w.front||P.w.front};
+    const near=u<.5?a:b;P.orb=near.orb;P.arrow=near.arrow;P.fx=near.fx;P.pull=lerp(a.pull||0,b.pull||0,u);P.lift=lerp(a.lift||0,b.lift||0,u);
+  }
+  return P;
+}
+
+const _q=new THREE.Quaternion(),_v=new THREE.Vector3();
+function aimBone(name,dirBody){
+  const n=nb(name);if(!n)return;
+  n.parent.updateWorldMatrix(true,false);
+  const pq=n.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+  const rq=root.getWorldQuaternion(new THREE.Quaternion());
+  const d=dirBody.clone().applyQuaternion(rq).applyQuaternion(pq).normalize();
+  n.quaternion.setFromUnitVectors(REST[name],d);
+}
+function applyPose(P,dt){
+  vrm.humanoid.resetNormalizedPose();
+  for(const [b,e] of Object.entries(P.euler)){const n=nb(b);if(n)n.rotation.set(e[0],e[1],e[2])}
+  for(const n of ARMS){aimBone(n,V(...P.aim[n]));nb(n)?.updateWorldMatrix(false,false)}
+  vrm.expressionManager?.setValue('blink',P.blink||0);
+  vrm.update(dt);vrm.scene.updateMatrixWorld(true);
+  // วางเท้าแตะพื้น: ข้อเท้าที่ต่ำสุดอยู่สูงจากพื้นเท่าตอนยืน
+  const lo=Math.min(rawY('leftFoot'),rawY('rightFoot'))-vrm.scene.position.y;
+  vrm.scene.position.y=vrm.userData.ankleT-lo+(P.lift||0)*WS;vrm.scene.updateMatrixWorld(true);
+  placeWeapon(P);
+}
+
+function gripOf(side){
+  const h=bone(side+'Hand'),l=bone(side+'LowerArm');
+  const hp=h.getWorldPosition(new THREE.Vector3()),lp=l.getWorldPosition(new THREE.Vector3());
+  return hp.add(hp.clone().sub(lp).normalize().multiplyScalar(.06*WS));
+}
+function orient(obj,dir,front){
+  const y=V(...dir),z=new THREE.Vector3(...front);z.sub(y.clone().multiplyScalar(z.dot(y)));
+  if(z.lengthSq()<1e-4)z.set(1,0,0).sub(y.clone().multiplyScalar(y.x));
+  z.normalize();const x=new THREE.Vector3().crossVectors(y,z);
+  obj.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x,y,z));
+}
+function placeWeapon(P){
+  const wt=$('weapon').value;W.obj.visible=!!P.w&&wt!=='none';W.orb.visible=W.arrow.visible=W.fire.visible=W.arc.visible=W.shock.visible=false;
+  if(!W.obj.visible)return;
+  const side=HOLD[wt].hand||'right';
+  const g=root.worldToLocal(gripOf(side));W.obj.position.copy(g);orient(W.obj,P.w.dir,P.w.front||[0,0,1]);W.obj.updateMatrixWorld(true);
+  const fwd=new THREE.Vector3(0,0,1);
+  if(P.orb){
+    const tip=W.obj.localToWorld(new THREE.Vector3(0,W.obj.userData.tip,0));let p=root.worldToLocal(tip);
+    if(P.orb[0]==='fly')p.add(fwd.clone().multiplyScalar(.75*WS)).add(new THREE.Vector3(0,.05*WS,0));
+    W.orb.position.copy(p);W.orb.scale.setScalar(P.orb[1]*WS);W.orb.visible=true;
+  }
+  if(wt==='bow'){
+    const st=W.obj.userData.string,pos=st.geometry.attributes.position;
+    let pull=new THREE.Vector3(0,0,-.14);
+    if(P.pull>.05){const rh=W.obj.worldToLocal(gripOf('right'));pull.lerp(rh,P.pull)}
+    pos.setXYZ(1,pull.x,pull.y,pull.z);pos.needsUpdate=true;
+    if(P.arrow){
+      const base=root.worldToLocal(W.obj.localToWorld(pull.clone()));
+      W.arrow.position.copy(base);if(P.arrow==='fly')W.arrow.position.add(fwd.clone().multiplyScalar(.9*WS));
+      orient(W.arrow,[0,0,1],[0,1,0]);W.arrow.visible=true;
+    }
+  }
+  const fx=P.fx;if(!fx)return;
+  if(fx.fire){const t=root.worldToLocal(W.obj.localToWorld(new THREE.Vector3(0,W.obj.userData.tip,0)));W.fire.position.copy(t);W.fire.scale.setScalar(fx.fire*.38*WS);W.fire.visible=true}
+  if(fx.arc){let [a0,a1]=fx.arc;if(a1<a0)[a0,a1]=[a1,a0];W.arc.geometry.dispose();
+    W.arc.geometry=new THREE.RingGeometry(.62*WS,.78*WS,28,1,a0-Math.PI/2,a1-a0);W.arc.position.set(0,W.obj.position.y,0);W.arc.visible=true}
+  if(fx.shock){const [r,o]=fx.shock;W.shock.scale.setScalar(r/.35*WS);W.shock.material.opacity=o;W.shock.visible=true}
+}
+
+/* ---------- เรนเดอร์ ---------- */
+function snap(){
+  R.render(scene,cam);
+  const c=document.createElement('canvas');c.width=c.height=CELL;const g=c.getContext('2d');g.drawImage(R.domElement,0,0);
+  if($('outline').checked)addOutline(g);
+  return c;
+}
+function addOutline(g){
+  const d=g.getImageData(0,0,CELL,CELL),a=d.data,o=new Uint8ClampedArray(a),T=110;
+  for(let y=0;y<CELL;y++)for(let x=0;x<CELL;x++){const i=(y*CELL+x)*4;if(a[i+3]>=T)continue;let hit=0;
+    for(let dy=-2;dy<=2&&!hit;dy++)for(let dx=-2;dx<=2;dx++){if(dx*dx+dy*dy>5)continue;const xx=x+dx,yy=y+dy;
+      if(xx>=0&&yy>=0&&xx<CELL&&yy<CELL&&a[(yy*CELL+xx)*4+3]>=T){hit=1;break}}
+    if(hit){o[i]=34;o[i+1]=24;o[i+2]=36;o[i+3]=255}}
+  g.putImageData(new ImageData(o,CELL,CELL),0,0);
+}
+const PERIOD={idle:2,walk:.8,attack:.6,skill1:.6,skill2:.55,skill3:1};
+async function bake(){
+  if(!vrm)throw new Error('ยังไม่มีโมเดล');
+  const wt=$('weapon').value;
+  if(W.obj)root.remove(W.obj,W.orb,W.arrow,W.fire,W.arc,W.shock);
+  applyChibi();WS=H/1.55;
+  W={obj:makeWeapon(wt),orb:makeOrb(),arrow:makeArrow(),fire:makeFire(),arc:makeArc(),shock:makeShock()};
+  W.obj.scale.setScalar(WS);W.arrow.scale.setScalar(WS);root.add(W.obj,W.orb,W.arrow,W.fire,W.arc,W.shock);
+  const frames={};
+  const ANIMS=animList();
+  for(const anim of ANIMS)for(const [dname,ang] of DIRS){
+    log(`กำลังเรนเดอร์ ${anim} / ${dname} ...`);await new Promise(r=>setTimeout(r,0));
+    root.rotation.y=ang;root.updateMatrixWorld(true);
+    const T=PERIOD[anim],dt=1/FPS,list=[];
+    // อุ่นเครื่องฟิสิกส์ผม/กระโปรง: เล่นท่าวนก่อน แล้วค่อยจับภาพ
+    const once=anim!=='idle'&&anim!=='walk',warm=once?.5:T;
+    for(let t=0;t<warm;t+=dt)applyPose(poseAt(anim,wt,once?0:(t/T)%1),dt);
+    for(let i=0;i<COLS;i++){
+      const target=once?i/(COLS-1):i/COLS;
+      const steps=Math.max(1,Math.round((once?T/(COLS-1):T/COLS)/dt));
+      if(i>0)for(let s=1;s<=steps;s++){const pp=once?(i-1+s/steps)/(COLS-1):((i-1)+s/steps)/COLS;applyPose(poseAt(anim,wt,pp),dt)}
+      else applyPose(poseAt(anim,wt,target),dt);
+      list.push(snap());
+    }
+    frames[anim+'/'+dname]=list;
+  }
+  // รวมเป็นชีต
+  const rows=ANIMS.length*DIRS.length,sheet=document.createElement('canvas');sheet.width=CELL*COLS;sheet.height=CELL*rows;
+  const sg=sheet.getContext('2d'),anims={};let row=0;
+  for(const anim of ANIMS){anims[anim]={};for(const [dname] of DIRS){
+    frames[anim+'/'+dname].forEach((c,i)=>sg.drawImage(c,i*CELL,row*CELL));
+    anims[anim][dname]=[...Array(COLS)].map((_,i)=>row*COLS+i);row++}}
+  // วัดความสูงตัว (ท่ายืนหันหน้าเฟรมแรก) + ตำแหน่งเท้า
+  const fi=anims.idle.front[0],fx=(fi%COLS)*CELL,fy=Math.floor(fi/COLS)*CELL,id=sg.getImageData(fx,fy,CELL,CELL).data;
+  let top=CELL,bot=0;for(let y=0;y<CELL;y++)for(let x=0;x<CELL;x++)if(id[(y*CELL+x)*4+3]>60){if(y<top)top=y;if(y>bot)bot=y}
+  const ft=new THREE.Vector3(0,0,0).project(cam),footPx=(1-ft.y)/2*CELL;
+  const body=+$('body').value,scale=body/(bot-top+1);
+  return {sheet,frames,anims:ANIMS,meta:{cw:CELL,ch:CELL,cols:COLS,rows,pixel:false,foot:+(footPx/CELL).toFixed(4),cx:.5,body,scale:+scale.toFixed(4),anims}};
+}
+
+let anTimer=0;
+function showPreview(res){
+  $('sheet').src=res.sheet.toDataURL();
+  const cv=$('anim'),g=cv.getContext('2d');let k=0;clearInterval(anTimer);
+  const seq=res.anims.flatMap(a=>[0,1,2,3,4,0,1,2,3,4].map(i=>[a,i]));
+  anTimer=setInterval(()=>{const [a,i]=seq[k++%seq.length];g.fillStyle='#4a6a3a';g.fillRect(0,0,cv.width,cv.height);
+    DIRS.forEach(([d],j)=>g.drawImage(res.frames[a+'/'+d][i],j*CELL,0));g.fillStyle='#fff';g.font='16px Tahoma';g.fillText(a,8,20)},110);
+}
+async function run(save){
+  try{
+    const res=await bake();showPreview(res);window.LAST=res;
+    if(!save){log('เสร็จ (ยังไม่บันทึก) — ความสูงตัว '+res.meta.body+' พิกเซลอาร์ต');return res}
+    const key=$('key').value.replace(/[^A-Za-z0-9_]/g,'');
+    const meta=Object.assign({img:res.sheet.toDataURL('image/webp',.95)},res.meta);
+    const js=`// generated by tools/bake_vrm.html from ${srcName} (weapon ${$('weapon').value}) - do not edit by hand\nwindow.SPRITES=window.SPRITES||{};window.SPRITES.${key}=${JSON.stringify(meta)};\n`;
+    const r=await fetch('/save/'+key+'.js',{method:'POST',body:js});
+    log(r.ok?`บันทึกแล้ว: game/${key}.js (${Math.round(js.length/1024)} KB)`:'บันทึกไม่สำเร็จ: '+r.status);return res;
+  }catch(e){console.error(e);log('ผิดพลาด: '+e.message)}
+}
+window.bakeVRM=run;   // ใช้จากคอนโซล/สคริปต์อัตโนมัติ
+window.dbg={get vrm(){return vrm},bone,nb,THREE};
+
+for(const id of ['head','leg']){const f=()=>$(id+'V').textContent=(+$(id).value).toFixed(2);$(id).oninput=f;f()}
+$('bPrev').onclick=()=>run(false);$('bSave').onclick=()=>run(true);
+$('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;const url=URL.createObjectURL(f);
+  try{await loadVRM(url,f.name);$('key').value='hd_'+f.name.replace(/\.vrm$/i,'').replace(/[^A-Za-z0-9_]/g,'_').toLowerCase()}catch(err){log('โหลดไม่ได้: '+err.message)}};
+async function pickModel(){const v=$('model').value;
+  try{if(v.startsWith('chibi:'))loadChibi(v.slice(6));else{await loadVRM(v.slice(4),v.slice(4));$('head').value=1.55;$('leg').value=.8;$('key').value='hd_sample';for(const id of ['head','leg'])$(id).oninput()}}
+  catch(e){log('โหลดไม่ได้: '+e.message)}}
+$('model').onchange=pickModel;
+window.loadChibi=c=>{$('model').value='chibi:'+c;return pickModel()};
+pickModel().then(()=>window.READY=true);
+</script>
+</body>
+</html>
