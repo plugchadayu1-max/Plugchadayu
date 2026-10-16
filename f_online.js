@@ -47,7 +47,7 @@ function cloudStatus(){
   const e=$('cloudSt');if(!e)return;
   if(!SESS){e.textContent='';return}
   const t=CLOUD.at?new Date(CLOUD.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'-';
-  e.innerHTML=`☁ ${emailToUser(SESS.user.email)}<br>${CLOUD.ok===false?'<span style="color:#ff9d9a">⚠ ซิงค์ไม่สำเร็จ${CLOUD.why?' ('+CLOUD.why+')':''} (จะลองใหม่)</span>':`ซิงค์ล่าสุด ${t}`}`;
+  e.innerHTML=`☁ ${emailToUser(SESS.user.email)}<br>${CLOUD.ok===false?'<span style="color:#ff9d9a">⚠ ซิงค์ไม่สำเร็จ'+(CLOUD.why?' ('+CLOUD.why+')':'')+' (จะลองใหม่)</span>':`ซิงค์ล่าสุด ${t}`}`;
 }
 async function cloudPush(keep){
   if(!SESS||NOSAVE||CLOUD.pushing&&!keep)return;
