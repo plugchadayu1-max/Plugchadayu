@@ -193,6 +193,7 @@ function socPop(o,x,y){
   const p=$('socPop'),inP=SOC.members.some(m=>m.uid===o.uid),full=SOC.members.length>=4;
   p.innerHTML=`<b>${esc(o.name)}</b><div class="small">${esc(o.job||CLASSES[o.cls].name)} • Lv ${o.lv}</div>
     <button class="go" ${inP||full?'disabled':''} onclick="partyInvite('${o.k}')">${inP?'👥 อยู่ปาร์ตี้เดียวกันแล้ว':full?'ปาร์ตี้เต็ม (4 คน)':'👥 ชวนเข้าปาร์ตี้'}</button>
+    <button onclick="inspectAsk('${o.k}')">👁 ดูตัวละคร</button>
     <button onclick="$('socPop').style.display='none'">ปิด</button>`;
   p.style.display='flex';
   const r=p.getBoundingClientRect();p.style.left=Math.round(clamp(x-r.width/2,8,innerWidth-r.width-8))+'px';p.style.top=Math.round(clamp(y-r.height-16,8,innerHeight-r.height-8))+'px';
@@ -219,6 +220,8 @@ function inboxJoin(){
     if(!p)return;const nm=cleanName2(p.name);
     say(p.ok?`👥 ${nm} เข้าร่วมปาร์ตี้แล้ว`:`${nm} ปฏิเสธคำชวน`,p.ok?'#8be07a':'#ccc');
   });
+  ch.on('broadcast',{event:'inspect'},({payload:p})=>{if(typeof inspectReq==='function')inspectReq(p)});   // ดูตัวละคร (f_inspect.js)
+  ch.on('broadcast',{event:'inspectres'},({payload:p})=>{if(typeof inspectRes==='function')inspectRes(p)});
   ch.subscribe();SOC.inbox=ch;
 }
 // ส่งข้อความเข้ากล่องของอีกคน (เปิดช่องชั่วคราว ส่งแล้วปิด)
