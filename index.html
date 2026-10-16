@@ -357,7 +357,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 <script src="thunder_sprites.js?v=2"></script>
 <script src="newclass_sprites.js?v=2"></script>
 <script src="equip_icons.js?v=1"></script>
-<script src="art2_assets.js?v=3"></script>
+<script src="art2_assets.js?v=4"></script>
 <script src="art2_boot.js?v=2"></script>
 <script>
 'use strict';
@@ -500,16 +500,24 @@ const ROSTER=[
   ['vl_hound','หมาล่าเนื้อ','cp_hound',163,{tint:'red'}],['vl_ghost','วิญญาณชาวบ้าน','cp_ghost',167,{ranged:1,tint:'gold'}],['vl_demon','ปีศาจเฝ้าซาก','cp_demon',171,{tint:'red'}],
   ['vl_medusa','เมดูซ่าแห่งบึง','cp_medusa',175,{ranged:1,tint:'blue'}],['vl_troll','โทรลล์ผู้ทำลายบ้าน','cp_trollA2',179,{big:1,tint:'red'}],['vl_rdemon','ปีศาจเพลิงถล่ม','cp_rdemon',183,{elite:1,tint:'gold'}],
   ['vl_hellh','เซอร์เบอรัสเฝ้าหมู่บ้าน','cp_hellh',187,{tint:'gold'}],['vl_reaper','อัศวินมรณะนิรันดร์','cp_reaper',191,{tint:'red'}],['vl_dragon','มังกรเพลิงอาถรรพ์','cp_dragon',195,{elite:1,tint:'red'}],
-  ['vl_jinn','จินน์ผู้ล่มสลาย','cp_jinn',198,{elite:1,ranged:1,tint:'gold'}],['ruinLord','จอมมารผู้ล่มหมู่บ้าน','cp_demon',200,{boss:1,px:2,tint:'red'}]
+  ['vl_jinn','จินน์ผู้ล่มสลาย','cp_jinn',198,{elite:1,ranged:1,tint:'gold'}],['ruinLord','จอมมารผู้ล่มหมู่บ้าน','cp_demon',200,{boss:1,px:2,tint:'red'}],
+  // ----- ทุ่งลาวาเดือด Lv 150-200 (โหดกว่า/EXP มากกว่า • ภาพชุดไฟ/มืดจาก mon2) -----
+  ['lv_slime','สไลม์ลาวาหลอมเหลว','m2_b0',150,{lava:1,tint:'red'}],['lv_imp','ภูตเพลิงนรก','m2_c3',155,{lava:1,ranged:1,tint:'gold'}],['lv_golem','โกเลมลาวาคลั่ง','m2_c5',160,{lava:1,big:1,tint:'red'}],
+  ['lv_shark','ฉลามหินลาวา','m2_c7',165,{lava:1,tint:'red'}],['lv_orc','ออร์คเหล็กหลอม','m2_c1',170,{lava:1,tint:'gold'}],['lv_wolf','หมาป่าถ่านเพลิง','m2_c2',173,{lava:1,tint:'red'}],
+  ['lv_knight','อัศวินกระดูกไหม้','m2_c8',177,{lava:1,tint:'red'}],['lv_bird','อินทรีเถ้าถ่าน','m2_c6',181,{lava:1,tint:'gold'}],['lv_bat','แมลงเพลิงปีกดำ','m2_c0',185,{lava:1,tint:'red'}],
+  ['lv_plant','ดอกไม้ไหม้กินคน','m2_c4',189,{lava:1,ranged:1,tint:'gold'}],['lv_hydra','ไฮดราลาวา','m2_c9',193,{lava:1,elite:1,tint:'red'}],['lv_golem2','โกเลมเจ้าไฟ','m2_c5',197,{lava:1,elite:1,big:1,tint:'gold'}],
+  ['lavaLord','เจ้าแห่งลาวา','m2_c5',200,{lava:1,boss:1,px:2,tint:'red'}]
 ];
 // แมพ Lv 101-200 โหดขึ้น: HP x4 / ATK x1.8 (ใช้ตอนสร้างตารางมอนสเตอร์จาก ROSTER เท่านั้น)
 const TOUGH_HI=(lv,s)=>{if(lv>100){s.hp=Math.round(s.hp*4);s.atk=Math.round(s.atk*1.8)}return s};
+// แมพลาวา: HP x1.6 ATK x1.3 DEF x1.25 EXP x2.5 Zeny x2 (ซ้อนบน TOUGH_HI)
+const TOUGH_LAVA=(o,s)=>{if(o.lava){s.hp=Math.round(s.hp*1.6);s.atk=Math.round(s.atk*1.3);s.def=Math.round(s.def*1.25);s.exp=Math.round(s.exp*2.5);s.zeny=s.zeny.map(v=>Math.round(v*2))}return s};
 // ภาพมอนสเตอร์ชุดใหม่ (mon2_sprites.js): Lv1-50 / 51-100 / 101-150 ชุดละ 10 แบบ — ใช้ซ้ำโดยเปลี่ยนสีตามลำดับเลเวล (Lv151+ ใช้ภาพเดิม)
 (function(){
   if(!window.MON2)return;
   const bands=[['a',1,50],['b',51,100],['c',101,150]],SUF={gold:'ทอง',blue:'น้ำเงิน',red:'แดง',violet:'ม่วง',green:'เขียว'},VAR=[null,'gold','blue','red','violet','green'];
   for(const [bk,lo,hi] of bands){
-    const L=ROSTER.filter(r=>r[3]>=lo&&r[3]<=hi).sort((x,y)=>x[3]-y[3]);let i=0;
+    const L=ROSTER.filter(r=>r[3]>=lo&&r[3]<=hi&&!(r[4]&&r[4].lava)).sort((x,y)=>x[3]-y[3]);let i=0;
     for(const r of L){
       const key='m2_'+bk+(i%10),o=r[4]=Object.assign({},r[4]||{}),isBoss=!!o.boss;
       const tv=isBoss?null:VAR[Math.floor(i/10)%VAR.length];
@@ -521,7 +529,7 @@ const TOUGH_HI=(lv,s)=>{if(lv>100){s.hp=Math.round(s.hp*4);s.atk=Math.round(s.at
 })();
 const MOBS={};
 const MOB_SCALE=1.5;   // ขยายมอนสเตอร์ทุกตัว (บอส/ผู้นำ/บอสโลก คูณต่อจากค่านี้) — ความสูงและจุดคลิกคำนวณตามอัตโนมัติ
-for(const [k,name,sprite,lv,o={}] of ROSTER)MOBS[k]=Object.assign({name,sprite,px:(o.px||1)*MOB_SCALE,ranged:!!o.ranged,elite:!!o.elite,boss:!!o.boss,tint:o.tint?TINTS[o.tint]:null},TOUGH_HI(lv,mobStats(lv,o)));
+for(const [k,name,sprite,lv,o={}] of ROSTER)MOBS[k]=Object.assign({name,sprite,px:(o.px||1)*MOB_SCALE,ranged:!!o.ranged,elite:!!o.elite,boss:!!o.boss,tint:o.tint?TINTS[o.tint]:null},TOUGH_LAVA(o,TOUGH_HI(lv,mobStats(lv,o))));
 
 /* ============ sprites ============ */
 const SHEETS={};
@@ -824,12 +832,50 @@ const MAPS={
     pal:{0:['#58a038','#68b444','#7cc858'],1:['#d4aa5a','#e2bc6a','#eed07e'],2:['#244e22','#2f6a2c','#3a8036'],3:['#2a9ac0','#3ab4d8','#6ad0ea'],
          4:['#5a4636','#7a6048','#9a7c5c'],5:['#6b4a2b','#8a6038','#a87a4a'],6:['#a89a80','#bcae94','#d0c2a8'],7:['#3a2a1a','#4a3622','#5a442c'],8:['#6a5a4a','#8a7860','#a89478'],9:['#8cc4e4','#a4d4ee','#c4e6f6']},
     deco:['bush','flower','rock'],trees:'tree',mcol:'#8a7058',
+    },
+  lava:{name:'ทุ่งลาวาเดือด',ic:'🌋',lv:'150-200',lavaMap:1,
+    grid:[
+'################################',
+'#..........HHHHHHHHHH..........#',
+'#..........HHHHHHHHHH..........#',
+'#..........HHHHHHHHHH..........#',
+'#..........HHHHHHHHHH..........#',
+'#..........HHHHHHHHHH..........#',
+'#..........HHHHHHHHHH..........#',
+'#..........HHHHHHHHHH..........#',
+'#..........HHHHHHHHHH..........#',
+'#..........HHHHHHHHHH..........#',
+'#..........HHHHHHHHHH..........#',
+'#..............,...............#',
+'#..............,...............#',
+'#...........~~~==~~~~~~~.......#',
+'#.......==~~~~~==~~~~~~~==~~...#',
+'#~~~~~~~==~~~~~......~~~==~~~~~#',
+'#~~~~~~~==..........r....~~~#~~#',
+'#..............,...........###.#',
+'#....r.........,............#r.#',
+'#.............,.....r~~~.......#',
+'#.#........r..,......~~~...~...#',
+'####...........,,....~~~..~~~..#',
+'#.#..............,.........~...#',
+'#.....==~~~~~~~~~..............#',
+'#.~~~~==~~~~~~~~~==~~.......~~~#',
+'#~~~~~==.......~~==~~~~~~~==~~~#',
+'#~~~...............~~~~~~~==~~~#',
+'#................,.~~~~~~......#',
+'#................,.~~~~~~......#',
+'#................,.~~~~~~......#',
+'#.....r..........,.............#',
+'################################'],
+    pal:{0:['#2a2224','#34292b','#42353a'],1:['#5a4636','#6e5642','#86684e'],2:['#2a2224','#34292b','#42353a'],3:['#d8400a','#f0701a','#ffb02a'],
+         4:['#15101a','#241a26','#3a2c3c'],5:['#4a3a34','#6a5648','#8a7260'],6:['#6e6258','#84786c','#9a8e80'],7:['#14101a','#1c1620','#241e2a'],8:['#3a3232','#524848','#6a5e5e'],9:['#4a3a34','#5a4a44','#6a5a54']},
+    deco:['rock','bones','dtree','lcrys2','lcrys3','lcrys4','dcrys1','dcrys2','lflame'],trees:null,mcol:'#3a2a30',
     }
 };
-const MAP_ORDER=['forest','desert','snow','deepwood','ruinvillage'];
+const MAP_ORDER=['forest','desert','snow','deepwood','ruinvillage','lava'];
 // มอนสเตอร์ของแต่ละแมพ = ทุกตัวใน ROSTER ที่เลเวลอยู่ในช่วงของแมพ  spawns: [key, จำนวนกลุ่ม, ขนาดกลุ่ม]
-for(const id in MAPS){const M=MAPS[id],[a,b]=M.lv.split('-').map(Number),inR=r=>r[3]>=a&&r[3]<=b,o=r=>r[4]||{};M.lvr=[a,b];
-  M.spawns=ROSTER.filter(r=>inR(r)&&!o(r).boss).map(r=>[r[0],o(r).elite?1:2,o(r).elite?3:o(r).big?4:0]);
+for(const id in MAPS){const M=MAPS[id],[a,b]=M.lv.split('-').map(Number),o=r=>r[4]||{},inR=r=>r[3]>=a&&r[3]<=b&&!!o(r).lava===!!M.lavaMap;M.lvr=[a,b];
+  M.spawns=ROSTER.filter(r=>inR(r)&&!o(r).boss).map(r=>M.lavaMap?[r[0],o(r).elite?1:2,o(r).elite?[3,4]:[10,12]]:[r[0],o(r).elite?1:2,o(r).elite?3:o(r).big?4:0]);
   M.boss=ROSTER.filter(r=>inR(r)&&o(r).boss).map(r=>r[0])}
 const TT={'.':0,',':1,'T':2,'~':3,'#':4,'=':5,'H':6,'o':7,'r':8,'i':9};
 const BLOCK=[0,0,1,1,1,0,0,0,1,0];   // เดินไม่ได้: ป่าทึบ น้ำ หน้าผา/กำแพง ซากหิน  (หลุมสีดำเดินผ่านได้)
@@ -1053,8 +1099,8 @@ function buildMap(id){
       else if(face){const s=hash2(x>>1,y>>2,5),sh=face<=2?.36:.58+Math.min(.32,(face-2)*.045);c=(s>.62?P_[1]:P_[0]).map(v=>v*sh);if(y%4===0)c=c.map(v=>v*.86)}
     }else if(t===3){ // น้ำ: ฟองที่ขอบ, น้ำตื้นสว่างกว่า, ประกายเป็นเส้นสั้น
       let e=9;for(let k=1;k<=4&&e===9;k++)if(T(x-k,y)!==3||T(x+k,y)!==3||T(x,y-k)!==3||T(x,y+k)!==3)e=k;
-      c=e===1?[214,236,246]:e<=3?P_[2]:P_[n>.55?1:0];
-      if(e>3&&hash2(x>>2,y,9)>.992)c=[200,232,250];
+      c=id==='lava'?(e===1?[255,236,140]:e<=3?P_[2]:P_[n>.55?1:0]):e===1?[214,236,246]:e<=3?P_[2]:P_[n>.55?1:0];
+      if(e>3&&hash2(x>>2,y,9)>.992)c=id==='lava'?[255,240,170]:[200,232,250];
     }else if(t===5){ // สะพานไม้: แผ่นกระดาน + ราวสองข้าง
       const lx_=x%CP,ly_=y%CP;c=lx_<2||lx_>CP-3||ly_<2||ly_>CP-3?[58,36,18]:(ly_%5===0?P_[0]:(lx_%9===0?P_[1]:P_[2]));
     }else if(t===6){ // เมือง: ก้อนหินปูพื้น
@@ -1101,9 +1147,9 @@ function buildMap(id){
   // ผังเมือง (ค่าเทียบจากกึ่งกลาง cx และขอบบน y0): แถว NPC ใต้ปราสาท → แถวร้านค้า/ป้ายเควสต์/ช่างตีเหล็ก → กองไฟ/ประตูดันเจี้ยน/ประตูวาร์ปด้านล่าง
   const S=(dx,dy)=>({x:town.cx+dx,y:y0+dy});
   town.slots={
-    shop:S(0,760),quest:S(-420,760),smith:S(420,760),dungeon:S(420,1110),hut:S(-420,1090),shrine:S(0,1100),
-    fire:[S(-210,900),S(210,900)],spawn:S(0,900),
-    npc:{elder:S(-420,520),sage:S(-150,520),merchant:S(150,520),cook:S(420,520),guide:S(-420,880),smith:S(420,880),fisher:S(-420,1210),rebirth:S(0,1220)}};
+    shop:S(0,760),quest:S(-420,760),smith:S(420,760),dungeon:S(420,1050),hut:S(-420,1050),shrine:S(0,1050),
+    fire:[S(-210,860),S(210,860)],spawn:S(0,860),
+    npc:{elder:S(-420,520),sage:S(-150,520),merchant:S(150,520),cook:S(420,520),guide:S(-225,770),smith:S(225,770),fisher:S(-230,1050),rebirth:S(170,1050)}};
   town.spy=town.slots.spawn.y-town.cy+60;   // ใช้แทน cy+60 ตอนเกิด/กลับเมือง (TOWN.cy+TOWN.spy-60 ไม่ใช้ — เก็บเป็น y จริงด้านล่าง)
   town.spawnY=town.slots.spawn.y;
   pr.push({k:'shop',x:town.slots.shop.x,y:town.slots.shop.y});
@@ -1141,7 +1187,7 @@ function enterMap(id,spawnAt){
   }
 }
 // ประตูวาร์ป: วงหมุนพิกเซล สีตามแผนที่ปลายทาง
-const PORTAL_COL={forest:['#3fbf5f','#9ff0b0'],desert:['#e0a040','#ffe0a0'],snow:['#4ab0f0','#c0f0ff'],deepwood:['#9a5af0','#d8b8ff'],ruinvillage:['#f0505a','#ffb0b4']};
+const PORTAL_COL={forest:['#3fbf5f','#9ff0b0'],desert:['#e0a040','#ffe0a0'],snow:['#4ab0f0','#c0f0ff'],deepwood:['#9a5af0','#d8b8ff'],ruinvillage:['#f0505a','#ffb0b4'],lava:['#ff7a1a','#ffd27a']};
 function drawPortal(p){
   const x=sxL(p.x),y=syL(p.y),[c1,c2]=PORTAL_COL[p.to];
   pxEllipse(x,y,15,5,'rgba(0,0,0,.3)',true);
@@ -1224,7 +1270,7 @@ function spawnMobs(){
       for(let t=0;t<120;t++){const c=placeIn(band[Math.random()*band.length|0]);if(!c)continue;const s=centers.reduce((m,o)=>Math.min(m,dist(o,c)),1e9);if(s>bs){bs=s;best=c}}
       if(!best)continue;centers.push(best);
       // สมาชิกในกลุ่ม 5-8 ตัว (ตัวใหญ่/หัวหน้า 3-4): กระจายรัศมี ~240 และห่างกันเองอย่างน้อย 70 หน่วย
-      const n=size||ri(5,8),pack=[],pid=centers.length;
+      const n=Array.isArray(size)?ri(size[0],size[1]):(size||ri(5,8)),pack=[],pid=centers.length;
       for(let i=0,tries=0;i<n&&tries<300;tries++){
         const a=rnd(0,6.3),r=i?rnd(70,240):0,x=best.x+Math.cos(a)*r,y=best.y+Math.sin(a)*r*.8;
         if(!okSpot(x,y)||pack.some(q=>Math.hypot(q.x-x,q.y-y)<70))continue;
@@ -2783,13 +2829,13 @@ function loop(t){const now=Date.now(),gap=(now-lastWall)/1000;lastWall=now;
 <script src="f_audio_combat.js?v=7"></script>
 <script src="f_rebirth.js?v=2"></script>
 <script src="f_smith2.js?v=1"></script>
-<script src="f_art2.js?v=5"></script>
+<script src="f_art2.js?v=7"></script>
 <script src="f_progress.js?v=26"></script>
 <script src="f_world.js?v=11"></script>
 <script src="f_style.js?v=10"></script>
 <script src="f_depth.js?v=2"></script>
 <script src="f_life.js?v=6"></script>
-<script src="f_theme.js?v=2"></script>
+<script src="f_theme.js?v=3"></script>
 <script src="f_online.js?v=8"></script>
 <script src="f_chat.js?v=8"></script>
 <script src="f_guide.js?v=3"></script>

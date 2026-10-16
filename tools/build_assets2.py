@@ -188,6 +188,23 @@ def props():
     montage(out, "props.png", 160, 8)
 
 
+# ---------------- ของประดับแมพลาวา: ผลึกส้มจากภาพลาวาโทนมืด ----------------
+def props_lava():
+    im = Image.open(os.path.join(SRC, "map", "Screenshot 2026-10-16 195653.png")).convert("RGB")
+    a = np.asarray(im).astype(int); r, g, bl = a[..., 0], a[..., 1], a[..., 2]
+    orange = (r > 190) & (g > 60) & (g < 200) & (bl < 110) & (r - bl > 110)
+    lab, k = ndi.label(ndi.binary_dilation(orange, iterations=2))
+    boxes = {"prop_lcrys1": (22, 54, 87, 108), "prop_lcrys2": (288, 187, 329, 235), "prop_lcrys3": (33, 235, 65, 288), "prop_lcrys4": (287, 466, 336, 516), "prop_lflame": (131, 41, 184, 100)}
+    out = []
+    for name, (x0, y0, x1, y1) in boxes.items():
+        sub = ndi.binary_fill_holes(ndi.binary_dilation(orange[y0:y1 + 1, x0:x1 + 1], iterations=2))
+        rgba = np.dstack([a[y0:y1 + 1, x0:x1 + 1].astype(np.uint8), (sub * 255).astype(np.uint8)])
+        img = Image.fromarray(rgba, "RGBA"); img = img.crop(img.getchannel("A").getbbox())
+        img = img.resize((img.width * 4, img.height * 4), Image.LANCZOS)
+        OUT[name] = webp_uri(img, 88); OUT[name + "_w"] = 18 if "crys" in name else 20; out.append(img)
+    montage(out, "props_lava.png", 160, 8)
+
+
 # ---------------- มอนสเตอร์ ----------------
 CELL = 192; ANCH = (96, 184); SC = 0.26
 SETS = {
