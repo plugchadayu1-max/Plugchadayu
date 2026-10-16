@@ -29,7 +29,7 @@
     }else{
       body=`<div class="small" style="margin-bottom:8px">“เจ้าถึงขีดสุดของเส้นทางแล้ว ข้าจะช่วยให้เจ้าเกิดใหม่ โดยพลังที่สั่งสมไว้จะไม่สูญหาย”</div>
         <div class="qr"><div class="qd"><b>บททดสอบแห่งการจุติ</b><br>ตีมอนสเตอร์ ${NEED} ตัว แล้วกลับมาหาข้า<br><span class="rw">รางวัล: สิทธิ์จุติ (Lv1 ค่าสถานะคงเดิม)</span></div></div>
-        <div style="text-align:center;margin-top:10px"><button onclick="rbAccept()" style="font-size:15px;padding:8px 22px">รับเควสต์</button></div>`;
+        <div style="text-align:center;margin-top:10px"><button class="bgreen" onclick="rbAccept()" style="font-size:15px;padding:8px 22px">รับเควสต์</button></div>`;
     }
     w.innerHTML=`<h3><span>🌟 เทพีเอลิน${P.rb?` • จุติแล้ว ${P.rb} ครั้ง`:''}</span><button class="x" onclick="toggleWin('winRb')">✕</button></h3><div class="winbody">${body}</div>`;
   }

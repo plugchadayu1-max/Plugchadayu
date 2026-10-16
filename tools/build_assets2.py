@@ -14,6 +14,8 @@ PREV = os.path.join(os.environ.get("TEMP", "."), "assets2_preview"); os.makedirs
 
 def cutout(im):
     """ตัดพื้นขาว (ส่วนที่ติดขอบภาพ) ให้โปร่งใสแบบนุ่ม — พื้นที่ขาวภายในตัวภาพคงไว้"""
+    if im.mode in ("RGBA", "LA", "P"):      # ต้นฉบับมีช่องโปร่งใส: วางบนพื้นขาวก่อน
+        im = im.convert("RGBA"); w = Image.new("RGB", im.size, (255, 255, 255)); w.paste(im, mask=im.getchannel("A")); im = w
     a = np.asarray(im.convert("RGB")).astype(int)
     m = a.min(axis=2)
     near = m > 200
@@ -127,14 +129,14 @@ def npcs():
 # ---------------- อาคาร ----------------
 def buildings():
     im = cutout(Image.open(os.path.join(SRC, "ร้านค้า", "Screenshot 2026-10-16 195907.png")))
-    its = ordered(comps(im, 4, 0.2, 14), 2)
+    figs = anchored(im, [(.25, .28), (.75, .28), (.25, .75), (.75, .75)], 0.003)
     names = ["bld_smith", "bld_hut", "bld_house", "bld_shrine"]
-    for n, (_, c) in zip(names, its): OUT[n] = webp_uri(fit_box(c, 420, 320), 88)
-    montage([c for _, c in its], "buildings.png", 300, 4)
+    for n, c in zip(names, figs): OUT[n] = webp_uri(fit_box(c, 420, 320), 88)
+    montage(figs, "buildings.png", 300, 4)
     shop = cutout(Image.open(os.path.join(SRC, "ร้านค้า", "Gemini_Generated_Image_843lvr843lvr843l.jpg")))
     shop = fit_box(shop, 760, 600); OUT["bld_shop"] = webp_uri(shop, 88); montage([shop], "shop.png", 500, 1)
     cas = cutout(Image.open(os.path.join(SRC, "ร้านค้า", "Gemini_Generated_Image_kd5i5okd5i5okd5i.jpg")))
-    cas = fit_box(cas, 1000, 750)
+    cas = fit_box(cas, 648, 490)
     old = os.path.join(G, "castle_old.png")
     if not os.path.exists(old) and os.path.exists(os.path.join(G, "castle.png")):
         Image.open(os.path.join(G, "castle.png")).save(old)
@@ -149,6 +151,41 @@ def buildings():
 def pond():
     im = Image.open(os.path.join(SRC, "map", "Screenshot 2026-10-16 195844.png")).convert("RGB")
     im.thumbnail((900, 900)); im.save(os.path.join(A2, "pond.webp"), "WEBP", quality=82)
+
+
+# ---------------- ของประดับทะเลทราย (ตัดจากภาพแมพไอโซเมตริกสีส้ม ด้วยหน้ากากสี) ----------------
+def props():
+    im = Image.open(os.path.join(SRC, "map", "Gemini_Generated_Image_ri162mri162mri16.jpg")).convert("RGB")
+    a = np.asarray(im).astype(int); H, W = a.shape[:2]
+    s = 1.26   # พิกัดที่ดูจากภาพย่อ ×1.26
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    mx, mn = a.max(axis=2), a.min(axis=2)
+    sat = (mx - mn) / np.maximum(mx, 1)
+    green = (g > r + 8) & (g > b + 25)
+    dark = mx < 100
+    bone = (sat < .32) & (mx > 175)
+    # (ชื่อ, กรอบ x0,y0,x1,y1 ในภาพย่อ, เงื่อนไขสี, ความกว้างบนฉาก(พิกเซลอาร์ต))
+    spec = [("prop_cactus", (20, 225, 215, 430), green | dark, 22),
+            ("prop_crysG1", (110, 1405, 275, 1555), green | dark, 22),
+            ("prop_crysG2", (1075, 1430, 1265, 1605), green | dark, 26),
+            ("prop_bush2", (600, 1610, 905, 1850), dark, 30),
+            ("prop_tree", (880, 40, 1225, 570), dark, 48),
+            ("prop_chest", (185, 985, 315, 1080), dark, 16)]
+    out = []
+    for name, (x0, y0, x1, y1), m, wa in spec:
+        x0, y0, x1, y1 = int(x0 * s), int(y0 * s), int(x1 * s), int(y1 * s)
+        sub = m[y0:y1, x0:x1]
+        sub = ndi.binary_closing(sub, iterations=2)
+        sub = ndi.binary_fill_holes(sub)
+        lab, k = ndi.label(sub)
+        if k == 0: print("empty", name); continue
+        sizes = ndi.sum(sub, lab, range(1, k + 1)); keep = lab == (1 + int(np.argmax(sizes)))
+        keep = ndi.binary_dilation(keep, iterations=2)
+        rgba = np.dstack([a[y0:y1, x0:x1].astype(np.uint8), (keep * 255).astype(np.uint8)])
+        img = Image.fromarray(rgba, "RGBA"); bb = img.getchannel("A").getbbox(); img = img.crop(bb)
+        k2 = min(1, 240 / max(img.size)); img = img.resize((max(1, round(img.width * k2)), max(1, round(img.height * k2))), Image.LANCZOS)
+        OUT[name] = webp_uri(img, 88); OUT[name + "_w"] = wa; out.append(img)
+    montage(out, "props.png", 160, 8)
 
 
 # ---------------- มอนสเตอร์ ----------------
@@ -270,4 +307,6 @@ if __name__ == "__main__":
         old.update(OUT)
         open(p, "w", encoding="utf-8").write("window.ART2=" + json.dumps(old) + ";\n")
         print(len(old), "assets", os.path.getsize(p) // 1024, "KB")
+
+
 

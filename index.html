@@ -77,6 +77,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .es,.bs{position:absolute;width:64px;height:64px;background:#0b0d18;border:3px solid #39406a;box-shadow:inset 0 0 0 2px #000,2px 2px 0 rgba(0,0,0,.5);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .es img,.bs img{width:48px;height:48px;image-rendering:pixelated}
 .es img[src^="data:image/webp"],.bs img[src^="data:image/webp"]{image-rendering:auto;object-fit:contain}
+.bgreen{background:linear-gradient(#5ad36a,#2f9a42)!important;color:#fff!important;border-color:#9bf0a6!important;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,.45)}.bgreen:hover{filter:brightness(1.12)}
 .es .ph{opacity:.22;filter:grayscale(1)}
 .es .lb{position:absolute;bottom:-1px;left:0;right:0;text-align:center;font-size:9px;color:#9aa3c8;text-shadow:1px 1px 0 #000}
 .bs{position:relative}
@@ -165,7 +166,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .st button:disabled{opacity:.25}
 .sep{height:2px;background:#39406a;margin:10px 0}
 .small{font-size:12px;opacity:.85}
-#start{position:fixed;inset:0;background:#141a12;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10;padding:16px;overflow:auto}
+#start{position:fixed;inset:0;background:linear-gradient(rgba(10,12,20,.55),rgba(10,12,20,.7)),#141a12 url(art2/bg_castle.webp) center/cover no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10;padding:16px;overflow:auto}
 #start h1{margin:0;font-size:clamp(28px,6vw,48px);color:var(--gold);text-shadow:4px 4px 0 #6b3d0a,8px 8px 0 #000;letter-spacing:3px}
 #start p{margin:0;opacity:.85}
 #cards{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
@@ -351,10 +352,13 @@ button{font:inherit;color:inherit;cursor:pointer}
 <script src="px_devil.js?v=2"></script>
 <script src="vfx.js?v=2"></script>
 <script src="monsters_cp.js?v=2"></script>
+<script src="mon2_sprites.js?v=2"></script>
 <script src="pets_sprites.js?v=2"></script>
 <script src="thunder_sprites.js?v=2"></script>
 <script src="newclass_sprites.js?v=2"></script>
 <script src="equip_icons.js?v=1"></script>
+<script src="art2_assets.js?v=3"></script>
+<script src="art2_boot.js?v=2"></script>
 <script>
 'use strict';
 /* ---- hooks: f_*.js ที่โหลดทีหลังจะประกาศฟังก์ชันชื่อเดียวกันทับ (ถ้าไฟล์เหล่านั้นโหลดไม่ขึ้น เกมหลักยังเล่นได้) ---- */
@@ -500,6 +504,21 @@ const ROSTER=[
 ];
 // แมพ Lv 101-200 โหดขึ้น: HP x4 / ATK x1.8 (ใช้ตอนสร้างตารางมอนสเตอร์จาก ROSTER เท่านั้น)
 const TOUGH_HI=(lv,s)=>{if(lv>100){s.hp=Math.round(s.hp*4);s.atk=Math.round(s.atk*1.8)}return s};
+// ภาพมอนสเตอร์ชุดใหม่ (mon2_sprites.js): Lv1-50 / 51-100 / 101-150 ชุดละ 10 แบบ — ใช้ซ้ำโดยเปลี่ยนสีตามลำดับเลเวล (Lv151+ ใช้ภาพเดิม)
+(function(){
+  if(!window.MON2)return;
+  const bands=[['a',1,50],['b',51,100],['c',101,150]],SUF={gold:'ทอง',blue:'น้ำเงิน',red:'แดง',violet:'ม่วง',green:'เขียว'},VAR=[null,'gold','blue','red','violet','green'];
+  for(const [bk,lo,hi] of bands){
+    const L=ROSTER.filter(r=>r[3]>=lo&&r[3]<=hi).sort((x,y)=>x[3]-y[3]);let i=0;
+    for(const r of L){
+      const key='m2_'+bk+(i%10),o=r[4]=Object.assign({},r[4]||{}),isBoss=!!o.boss;
+      const tv=isBoss?null:VAR[Math.floor(i/10)%VAR.length];
+      r[2]=key;
+      if(!isBoss){r[1]=MON2.names[key]+(tv?SUF[tv]:'');if(tv)o.tint=tv;else delete o.tint}else delete o.tint;
+      if(!isBoss)i++;else i+=0;
+    }
+  }
+})();
 const MOBS={};
 const MOB_SCALE=1.5;   // ขยายมอนสเตอร์ทุกตัว (บอส/ผู้นำ/บอสโลก คูณต่อจากค่านี้) — ความสูงและจุดคลิกคำนวณตามอัตโนมัติ
 for(const [k,name,sprite,lv,o={}] of ROSTER)MOBS[k]=Object.assign({name,sprite,px:(o.px||1)*MOB_SCALE,ranged:!!o.ranged,elite:!!o.elite,boss:!!o.boss,tint:o.tint?TINTS[o.tint]:null},TOUGH_HI(lv,mobStats(lv,o)));
@@ -518,8 +537,8 @@ function loadVfx(){return Promise.all(Object.entries(window.VFX||{}).map(([k,v])
 // วางเอฟเฟกต์ที่จุด (x,y) ในโลก  o.flip = กลับซ้าย-ขวา, o.to = ลากเป็นเส้นไปยังอีกจุด (สายฟ้าเชื่อม)
 function vfx(name,x,y,o={}){if(VFXI[name])fx.push(Object.assign({k:'vfx',name,x,y,age:-(o.delay||0),life:VFXI[name].dur*(o.slow||1)},o))}
 function loadSheets(){
-  const castle=new Promise(res=>{const i=new Image();i.onload=()=>{window.CASTLE_IM=i;res()};i.onerror=res;i.src='castle.png'});   // ปราสาทกลางเมือง (วาดลง ART.castle ใน makeArt)
-  return Promise.all([castle,...Object.entries(window.SPRITES||{}).map(([k,m])=>new Promise(res=>{const i=new Image();i.onload=()=>{SHEETS[k]=Object.assign({im:i},m);res()};i.onerror=()=>{console.warn('sprite fail',k);res()};i.src=m.img}))]);
+  const castle=new Promise(res=>{const i=new Image();i.onload=()=>{window.CASTLE_IM=i;res()};i.onerror=res;i.src='castle.png?v=2'});   // ปราสาทกลางเมือง (วาดลง ART.castle ใน makeArt)
+  return Promise.all([castle,window.loadArt2?loadArt2():0,...Object.entries(window.SPRITES||{}).map(([k,m])=>new Promise(res=>{const i=new Image();i.onload=()=>{SHEETS[k]=Object.assign({im:i},m);res()};i.onerror=()=>{console.warn('sprite fail',k);res()};i.src=m.img}))]);
 }
 // ความสูง (หน่วยเกม) ของตัวละคร = ความสูงลำตัวในรูป × A × จำนวนเท่าที่ขยาย
 // ขนาดตัวละครผู้เล่น/มอนสเตอร์ในฉาก (0.5 = เล็กลงครึ่งหนึ่ง) — ปรับตัวเลขเดียวได้ทั้งภาพ เงา หลอดเลือด และระยะโดน
@@ -1082,11 +1101,12 @@ function buildMap(id){
   town.slots={
     shop:S(0,800),quest:S(-420,800),smith:S(420,800),dungeon:S(420,1070),
     fire:[S(-210,930),S(210,930)],spawn:S(0,1010),
-    npc:{elder:S(-420,590),sage:S(-150,590),merchant:S(150,590),cook:S(420,590),fisher:S(-420,1020)}};
+    npc:{elder:S(-420,590),sage:S(-150,590),merchant:S(150,590),cook:S(420,590),fisher:S(-420,1330),rebirth:S(0,1385),smith:S(420,890),guide:S(-420,890)}};
   town.spy=town.slots.spawn.y-town.cy+60;   // ใช้แทน cy+60 ตอนเกิด/กลับเมือง (TOWN.cy+TOWN.spy-60 ไม่ใช้ — เก็บเป็น y จริงด้านล่าง)
   town.spawnY=town.slots.spawn.y;
   pr.push({k:'shop',x:town.slots.shop.x,y:town.slots.shop.y});
   pr.push({k:'quest',x:town.slots.quest.x,y:town.slots.quest.y},{k:'smith',x:town.slots.smith.x,y:town.slots.smith.y});
+  if(ART.hut)pr.push({k:'hut',x:town.cx-420,y:y0+1270},{k:'shrine',x:town.cx,y:y0+1320});   // กระท่อมลุงปลา + ศาลเทพีเอลิน (จุติ) — f_art2.js
   // รั้วไม้รอบเมือง: เว้นประตูกว้าง 4 ช่องกลางแต่ละด้านที่ด้านนอกเป็นพื้นเดินได้ (ไม่มี = เปิดครบ 4 ด้าน) • รั้วชนได้
   {const F=8,sd=[['t',town.cx,y0+F],['b',town.cx,y1-F],['l',x0+F,town.cy],['r',x1-F,town.cy]],
     outOK=s=>{const ox=s[0]==='l'?x0-CELL/2:s[0]==='r'?x1+CELL/2:s[1],oy=s[0]==='t'?y0-CELL/2:s[0]==='b'?y1+CELL/2:s[2];return !BLOCK[TT[gc(Math.floor(ox/CELL),Math.floor(oy/CELL))]]};
@@ -1798,6 +1818,7 @@ function render(){
     if(/^(tree|pine|snowpine)\d?$/.test(p.k)||p.mtn){
       const behind=P.y<p.y&&P.y>p.y-im.height*A&&Math.abs(P.x-p.x)<im.width*A*.45;   // บังผู้เล่น -> โปร่งใส
       if(behind)lx.globalAlpha=.4;lx.drawImage(im,x-(im.width>>1),y-im.height+3);lx.globalAlpha=1}
+    else if(im._k){lx.save();lx.imageSmoothingEnabled=true;lx.imageSmoothingQuality='high';lx.drawImage(im,0,0,im._bw,im._bh,x-(im.width>>1),y-im.height+3,im.width,im.height);lx.restore()}   // อาคารภาพละเอียดสูง (f_art2.js)
     else lx.drawImage(im,x-(im.width>>1),y-im.height+3)}})}
   for(const f of fires)if(inView(f.x,f.y,60,60))Ls.push({y:f.y,f:()=>drawFire(f)});
   for(const m of mobs){
@@ -1997,8 +2018,12 @@ function addStat(k){PEND[k]=0;if(P.pts>0){P.pts--;P.stats[k]++;refreshChar()}}
 function refreshShop(){
   const w=$('winShop');if(w.style.display!=='block')return;
   w.innerHTML=`<h3><span>🏪 ร้านค้า</span><button class="x" onclick="toggleWin('winShop')">✕</button></h3><div class="small">เงินของคุณ: 💰 ${P.zeny} Zeny</div><div class="sep"></div>`+
-  ['hp','sp'].map(k=>`<div class="st"><span><img src="${potionURL(k)}" style="width:28px;height:28px;image-rendering:pixelated;vertical-align:middle"> ${POTS[k].n} <span class="small">(มี ${P.pot[k]}) ${POTS[k].price}z</span></span><span><button onclick="buy('${k}',1)">1</button> <button onclick="buy('${k}',5)" style="width:36px">5</button></span></div>`).join('');
+  ['hp','sp'].map(k=>`<div class="st"><span><img src="${potionURL(k)}" style="width:28px;height:28px;image-rendering:pixelated;vertical-align:middle"> ${POTS[k].n} <span class="small">(มี ${P.pot[k]}) ${POTS[k].price}z</span></span><span><button onclick="buy('${k}',1)">1</button> <button onclick="buy('${k}',5)" style="width:36px">5</button></span></div>`).join('')+EXP_POTS.map(o=>{const im=window.ART2&&ART2[o.img],act=(P.dx&&P.dx.buffs||[]).find(b=>b.id===o.id),left=act?Math.max(0,Math.ceil((act.until-Date.now())/60000)):0;
+    return `<div class="st"><span>${im?`<img src="${im}" style="width:34px;height:34px;vertical-align:middle">`:o.ic} ${o.n} <span class="small">${o.d} • ${o.price.toLocaleString()}z${left?` • เหลือ ${left} นาที`:''}</span></span><span><button onclick="buyExpPot('${o.id}')">ซื้อ+ดื่ม</button></span></div>`}).join('');
 }
+// ยา EXP: ซื้อแล้วดื่มทันที เพิ่ม EXP ที่ได้ 30 นาที (ดื่มซ้ำ = ต่อเวลาใหม่/เปลี่ยนชนิด)
+const EXP_POTS=[{id:'potExp15',img:'pot_exp15',ic:'🧪',n:'ยา EXP x1.5',d:'EXP +50% นาน 30 นาที',price:30000},{id:'potExp2',img:'pot_exp2',ic:'⚗️',n:'ยา EXP x2',d:'EXP +100% นาน 30 นาที',price:80000}];
+function buyExpPot(id){const o=EXP_POTS.find(q=>q.id===id);if(!o)return;if(P.zeny<o.price){say('Zeny ไม่พอ','#ff9d9a');return}P.zeny-=o.price;addBuff(id,30);sfx('levelup');toast(`${o.ic} ดื่ม${o.n} — ${o.d}`);refreshShop()}
 function buy(k,n){const c=POTS[k].price*n;if(P.zeny<c){say('Zeny ไม่พอ','#ff9d9a');return}P.zeny-=c;P.pot[k]+=n;refreshShop();refreshBag()}
 function toggleWin(id){
   const w=$(id),open=w.style.display==='block';
@@ -2506,7 +2531,7 @@ function refreshQuest(){
     const order=q=>{const s=P.qs[q.id];return (s?(s.s===1?(s.p>=q.c?0:1):3):2)*1000+q.lv};
     body=QUESTS.slice().sort((a,b)=>order(a)-order(b)).map(q=>{const s=P.qs[q.id],done=s&&s.s===1&&s.p>=q.c;
       return `<div class="qr${done?' done':''}${s&&s.s===2?' claimed':''}"><div class="qd"><b>${q.n}</b> <span class="small" style="color:${P.lv>=q.lv?'#9be58a':'#ff9d9a'}">แนะนำ Lv ${q.lv}</span><br>${qText(q)}${s&&s.s===1?bar(s.p,q.c)+`<span class="small">${s.p}/${q.c}</span><br>`:'<br>'}<span class="rw">รางวัล: ${rewardText(q.r)}</span></div>`+
-        (!s?`<button onclick="acceptQuest('${q.id}')">รับเควสต์</button>`:s.s===2?'<span class="small">สำเร็จแล้ว ✓</span>':`<button ${done?'':'disabled'} onclick="claimQuest('${q.id}')">${done?'รับรางวัล':'กำลังทำ'}</button>`)+`</div>`}).join('');
+        (!s?`<button class="bgreen" onclick="acceptQuest('${q.id}')">รับเควสต์</button>`:s.s===2?'<span class="small">สำเร็จแล้ว ✓</span>':`<button ${done?'':'disabled'} onclick="claimQuest('${q.id}')">${done?'รับรางวัล':'กำลังทำ'}</button>`)+`</div>`}).join('');
   }else if(QU.tab==='daily'){
     body='<div class="small">ภารกิจประจำวัน รีเซ็ตทุกเที่ยงคืน (เวลาเครื่องของคุณ)</div>'+P.daily.list.map((q,i)=>{const done=q.p>=q.c;
       return `<div class="qr${done&&!q.d?' done':''}${q.d?' claimed':''}"><div class="qd"><b>☀ ${q.x}</b>${bar(q.p,q.c)}<span class="small">${q.p}/${q.c}</span><br><span class="rw">รางวัล: ${rewardText(q.r)}</span></div>`+
@@ -2753,13 +2778,14 @@ function loop(t){const now=Date.now(),gap=(now-lastWall)/1000;lastWall=now;
 </script>
 <!-- ฟีเจอร์เสริม: ต้องโหลดต่อจากสคริปต์หลักทันที (ประกาศ hook ทับก่อนเกมเริ่มทำงาน) -->
 <script src="f_audio_combat.js?v=7"></script>
-<script src="f_rebirth.js?v=1"></script>
+<script src="f_rebirth.js?v=2"></script>
 <script src="f_smith2.js?v=1"></script>
+<script src="f_art2.js?v=4"></script>
 <script src="f_progress.js?v=26"></script>
 <script src="f_world.js?v=11"></script>
 <script src="f_style.js?v=10"></script>
-<script src="f_depth.js?v=1"></script>
-<script src="f_life.js?v=4"></script>
+<script src="f_depth.js?v=2"></script>
+<script src="f_life.js?v=6"></script>
 <script src="f_theme.js?v=2"></script>
 <script src="f_online.js?v=8"></script>
 <script src="f_chat.js?v=8"></script>

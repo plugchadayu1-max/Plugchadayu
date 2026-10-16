@@ -106,7 +106,7 @@ function refreshStory(){
     body=chs+`<div style="font-size:16px;color:#ffe28a;font-weight:bold">บทที่ ${S.ch+1}: ${c.t}</div><div class="small">แนะนำ Lv ${c.lv}${P.lv<c.lv?' <span style="color:#ff9d9a">(ยังไม่ถึง)</span>':''}</div>`+
       c.talk.map(t=>`<div class="bub"><b>${c.who}</b><br>${t}</div>`).join('')+
       `<div class="obj">🎯 ${c.obj.txt} <b>${S.st>=1?p:0}/${c.obj.c}</b></div><div class="small">รางวัล: ${rewardText(c.r)}${c.title?` • ฉายา "${c.title.n}"`:''}</div>`+
-      `<div style="text-align:center;margin-top:8px">${S.st===0?`<button onclick="storyAccept()">รับภารกิจ</button>`:S.st===1?`<button onclick="storyGo();toggleWin('winStory')">ไปทำภารกิจ (ออโต้)</button>`:`<button onclick="storyClaim()" style="font-size:15px;padding:8px 20px">รับรางวัล</button>`}</div>`;
+      `<div style="text-align:center;margin-top:8px">${S.st===0?`<button class="bgreen" onclick="storyAccept()">รับภารกิจ</button>`:S.st===1?`<button onclick="storyGo();toggleWin('winStory')">ไปทำภารกิจ (ออโต้)</button>`:`<button onclick="storyClaim()" style="font-size:15px;padding:8px 20px">รับรางวัล</button>`}</div>`;
   }
   w.innerHTML=`<h3><span>📖 เรื่องราวแห่งทุ่งหญ้า</span><button class="x" onclick="toggleWin('winStory')">✕</button></h3><div class="winbody">${body}</div>`;
 }
@@ -122,9 +122,12 @@ const FISH=[
   {id:'f8',n:'ปลาหลาบมังกร',t:3,v:1500}];
 const TIERN=['ธรรมดา','ดี','หายาก','ตำนาน'],TIERC=['#cfd6e8','#9be58a','#c58aff','#ffd27a'];
 const ROD_COST=[0,800,2500,6000,12000];   // ค่าอัปเบ็ดไปเลเวล 2..5
-const BAIT=15;
+// เหยื่อตกปลา 6 ชนิด (ภาพจาก art2_assets.js): ยิ่งแพงยิ่งเจอปลาหายากง่ายขึ้น (บวกเพิ่มในค่าโอกาสปลาเกรดสูง)
+const BAITS=[{n:'ไส้เดือน',cost:15,b:0},{n:'หนอนไม้',cost:40,b:.03},{n:'ตั๊กแตน',cost:90,b:.06},{n:'เหยื่อปลอมปลาซิว',cost:250,b:.1},{n:'สปินเนอร์ทอง',cost:700,b:.16},{n:'เหยื่อปลอมกบมรกต',cost:1800,b:.25}];
+const baitCur=()=>BAITS[Math.min(BAITS.length-1,Math.max(0,(P.dx&&P.dx.bait)|0))];
+function baitPick(i){P.dx.bait=i;refreshLife()}
 function rollFish(){
-  const L=(P.dx.rod-1)*.04,r=Math.random(),t3=.02+L*.3,t2=.11+L*.7,t1=.25+L*.5;
+  const L=(P.dx.rod-1)*.04+baitCur().b,r=Math.random(),t3=.02+L*.3,t2=.11+L*.7,t1=.25+L*.5;
   const t=r<t3?3:r<t3+t2?2:r<t3+t2+t1?1:0,pool=FISH.filter(f=>f.t===t);return pool[Math.random()*pool.length|0];
 }
 const fishCount=(minT)=>FISH.filter(f=>f.t>=minT).reduce((s,f)=>s+(P.dx.fish[f.id]||0),0);
@@ -178,8 +181,8 @@ const LF={tab:'fish',ph:'idle',pos:0,dir:1,zs:.4,zw:.25,fish:null,spd:1,raf:0,ms
   document.head.appendChild(s);
 })();
 function fishCast(){
-  if(LF.ph!=='idle')return;if(P.zeny<BAIT){say(`ต้องมีเหยื่อ ${BAIT} Zeny`,'#ff9d9a');return}
-  P.zeny-=BAIT;LF.ph='wait';LF.msg='รอปลากินเบ็ด...';refreshLife();
+  if(LF.ph!=='idle')return;if(P.zeny<baitCur().cost){say(`ต้องมีเหยื่อ ${baitCur().cost} Zeny`,'#ff9d9a');return}
+  P.zeny-=baitCur().cost;LF.ph='wait';LF.msg='รอปลากินเบ็ด...';refreshLife();
   setTimeout(()=>{if(LF.ph!=='wait')return;
     const f=rollFish();LF.fish=f;LF.ph='bar';LF.pos=0;LF.dir=1;
     LF.zw=Math.max(.1,(.18+.04*P.dx.rod)*[1,.85,.7,.55][f.t]);LF.zs=rnd(.1,.9-LF.zw);LF.spd=.9+f.t*.28;LF.msg='ปลากินเบ็ดแล้ว! กด "ดึง!" ตอนขีดอยู่ในโซนเขียว';sfx('alert');refreshLife();fishLoop()
@@ -224,10 +227,11 @@ function refreshLife(){
     const inv=FISH.filter(f=>P.dx.fish[f.id]).map(f=>`<span style="color:${TIERC[f.t]}">${f.n} x${P.dx.fish[f.id]}</span>`).join('')||'<span>ยังไม่มีปลา</span>';
     const nextRod=P.dx.rod<5?ROD_COST[P.dx.rod]:0;
     let area='';
-    if(LF.ph==='idle')area=`<button onclick="fishCast()" style="font-size:15px;padding:8px 22px">🎣 ลงเบ็ด (${BAIT}z)</button>`;
+    if(LF.ph==='idle')area=`<button onclick="fishCast()" style="font-size:15px;padding:8px 22px">🎣 ลงเบ็ด (${baitCur().cost}z)</button>`;
     else if(LF.ph==='wait')area='<div class="small">... รอปลากินเบ็ด ...</div>';
     else area=`<div class="fbar"><div class="z" style="left:${LF.zs*100}%;width:${LF.zw*100}%"></div><div class="m" id="fMk" style="left:calc(${LF.pos*100}% - 3px)"></div></div><button onclick="fishPull()" style="font-size:16px;padding:9px 30px">ดึง!</button>`;
-    body=`<div class="small" style="margin-bottom:4px">ตกปลาจับจังหวะ — เบ็ดดีขึ้นโซนกว้างขึ้นและเจอปลาหายากง่ายขึ้น ปลาใช้ทำอาหารบัฟ หรือขายเอาเงิน</div>
+    const bi=baitCur(),baitRow=BAITS.map((q,i)=>`<div onclick="baitPick(${i})" title="${q.n} ${q.cost}z • ปลาหายาก +${Math.round(q.b*100)}%" style="cursor:pointer;text-align:center;padding:3px;border:2px solid ${q===bi?'#ffd04a':'#39406a'};background:#10142a;width:64px;font-size:10px">${window.ART2&&ART2['bait'+i]?`<img src="${ART2['bait'+i]}" style="width:36px;height:36px;object-fit:contain">`:'🪱'}<br>${q.n}<br><span style="color:#ffe28a">${q.cost}z</span></div>`).join('');
+    body=`<img src="art2/pond.webp" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:6px;border:2px solid #39406a;display:block;margin-bottom:6px"><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-bottom:6px">${baitRow}</div><div class="small" style="margin-bottom:4px">เหยื่อ: <b>${bi.n}</b> (โอกาสปลาหายาก +${Math.round(bi.b*100)}%)</div><div class="small" style="margin-bottom:4px">ตกปลาจับจังหวะ — เบ็ดดีขึ้นโซนกว้างขึ้นและเจอปลาหายากง่ายขึ้น ปลาใช้ทำอาหารบัฟ หรือขายเอาเงิน</div>
       <div class="mat"><span>🎣 เบ็ดเลเวล ${P.dx.rod}/5</span><span>ตกแล้ว ${P.dx.stat.fish} ตัว</span>${nextRod?`<button onclick="rodUp()" style="margin-left:auto">อัปเบ็ด ${nextRod.toLocaleString()}z</button>`:''}</div>
       <div style="text-align:center;margin:6px 0">${area}<div class="small" style="margin-top:4px;min-height:16px;color:#ffe28a">${LF.msg}</div></div>
       <div class="fv">${inv}</div>
@@ -254,10 +258,12 @@ addEventListener('keydown',e=>{if(P&&keyName(e)==='g')toggleWin('winLife')});
 const NPCS=[
   {id:'elder',n:'ผู้ใหญ่สมชัย',cls:'warrior',sty:{shirt:'white',hair:'silver',skin:'tan',hat:'straw'},act:'story'},
   {id:'sage',n:'ปราชญ์ลูน่า',cls:'mage',sty:{dye:'purple',hat:'halo'},act:'story'},
-  {id:'fisher',n:'ลุงปลา',cls:'warrior',sty:{shirt:'blue',hair:'brown',skin:'brown',hat:'straw',dye:'teal'},act:'fish'},
+  {id:'fisher',n:'ลุงปลา',cls:'warrior',img:'fisher',sty:{shirt:'blue',hair:'brown',skin:'brown',hat:'straw',dye:'teal'},act:'fish'},
   {id:'cook',n:'ป้าใบ',cls:'rogue',sty:{dye:'green',hair:'black',hat:'flowers'},act:'cook'},
-  {id:'merchant',n:'พ่อค้าเร่ ฮันส์',cls:'rogue',sty:{dye:'orange',hair:'brown',hat:'tophat',back:'capeR'},act:'shop'},
-  {id:'rebirth',n:'เทพีเอลิน (จุติ)',cls:'mage',sty:{dye:'orange',hair:'silver',hat:'halo'},act:'rebirth'}
+  {id:'merchant',n:'พ่อค้าเร่ ฮันนา',cls:'rogue',img:'merchant',sty:{dye:'orange',hair:'brown',hat:'tophat',back:'capeR'},act:'shop'},
+  {id:'rebirth',n:'เทพีเอลิน (จุติ)',cls:'mage',img:'goddess',sty:{dye:'orange',hair:'silver',hat:'halo'},act:'rebirth'},
+  {id:'smith',n:'ช่างตีเหล็กบอร์ก',cls:'warrior',img:'smith',act:'smith'},
+  {id:'guide',n:'นักสำรวจเอลซ่า',cls:'rogue',img:'guide',act:'quest'}
 ];
 const NP=[];let npMap='';
 function npcSpawn(){
@@ -266,7 +272,7 @@ function npcSpawn(){
     const C=CLASSES[d.cls];if(!SHEETS[C.sprite])continue;
     let x=0,y=0;const sl=TOWN.slots&&TOWN.slots.npc&&TOWN.slots.npc[d.id];
     if(sl){x=sl.x;y=sl.y}else for(let t=0;t<60;t++){x=rnd(TOWN.x0+110,TOWN.x1-110);y=rnd(TOWN.y0+150,TOWN.y1-70);if(walkable(x,y))break}
-    const a=makeActor(C.sprite),sh=styledSheet(d.cls,d.sty);if(sh)a.sh=sh;
+    const a=makeActor(C.sprite),sh=d.img?null:styledSheet(d.cls,d.sty);if(sh)a.sh=sh;
     NP.push({d,x,y,hx:x,hy:y,wx:x,wy:y,wt:rnd(0,3),actor:a});
   }
 }
@@ -289,13 +295,15 @@ REG.tick.push((dt)=>{
 function npcOpen(d){
   if(d.act==='story'){openStory();return}
   if(d.act==='rebirth'){rbOpen();return}
+  if(d.act==='smith'){if(typeof inTown==='function'&&!inTown(P.x,P.y)){say('ต้องอยู่ในเมืองก่อน','#ffe28a');return}if($('winSmith').style.display!=='block')toggleWin('winSmith');return}
+  if(d.act==='quest'){if($('winQuest').style.display!=='block')toggleWin('winQuest');return}
   LF.tab=d.act;if($('winLife').style.display!=='block')toggleWin('winLife');else refreshLife();
 }
 addEventListener('pointerdown',e=>{
   if(!P||e.target!==cv||P.hp<=0||P.dying>0||!NP.length||!e.isPrimary)return;
   const w=worldPos(e);
   for(const n of NP){
-    const h=CLASSES[n.d.cls].h;
+    const h=n.d.img?114:CLASSES[n.d.cls].h;
     if(Math.abs(w.x-n.x)<h*.35+10&&n.y-w.y>-14&&n.y-w.y<h+14){
       e.stopPropagation();e.preventDefault();P.target=null;P.dest={x:n.x,y:n.y+54};P.npcx=n;return}
   }
@@ -305,6 +313,11 @@ REG.draw.push((Ls,iv)=>{
     if(!iv(n.x,n.y,100,160))continue;
     Ls.push({y:n.y,f:()=>{
       lx.globalAlpha=.28;pxEllipse(sxL(n.x),syL(n.y),9,3,'#000',true);lx.globalAlpha=1;
+      const im=n.d.img&&window.ART2_IM&&ART2_IM['npc_'+n.d.img+'_1'];
+      if(im){   // NPC ภาพใหม่ (art2): เดินหันตามทิศ + ขยับขึ้นลงเบาๆ
+        const hh=38,ww=im.width*hh/im.height,bob=Math.abs(Math.sin(time*(n.actor.anim==='walk'?7:2.2)))*(n.actor.anim==='walk'?1.6:.7),fl=Math.cos(n.actor.ang)<-.2;
+        lx.save();lx.imageSmoothingEnabled=true;lx.imageSmoothingQuality='high';lx.translate(sxL(n.x),syL(n.y)-bob);if(fl)lx.scale(-1,1);
+        lx.drawImage(im,-ww/2,-hh+1,ww,hh);lx.restore();return}
       drawStyleWorld(n.actor,n.x,n.y,'back',n.d.sty);drawActor(n.actor,n.x,n.y,{sc:UNIT_SCALE});drawStyleWorld(n.actor,n.x,n.y,'front',n.d.sty);
     }});
   }
@@ -319,8 +332,8 @@ function npcMark(n){
 REG.names.push((TX,sc)=>{
   if(!P||!P.dx)return;
   for(const n of NP){
-    const hL=Math.round(CLASSES[n.d.cls].h/A),x=sxL(n.x),y=syL(n.y)-hL-(n.d.sty.hat&&n.d.sty.hat!=='none'?22:10);if(x<-60||x>LW+60||y<-30||y>LH+30)continue;
-    const mk=npcMark(n),ic={story:'📖',fish:'🎣',cook:'🍲',shop:'🛒',rebirth:'🌟'}[n.d.act];
+    const hL=n.d.img?38:Math.round(CLASSES[n.d.cls].h/A),x=sxL(n.x),y=syL(n.y)-hL-(n.d.img?6:(n.d.sty.hat&&n.d.sty.hat!=='none'?22:10));if(x<-60||x>LW+60||y<-30||y>LH+30)continue;
+    const mk=npcMark(n),ic={story:'📖',fish:'🎣',cook:'🍲',shop:'🛒',rebirth:'🌟',smith:'⚒',quest:'📜'}[n.d.act];
     TX(x*sc,y*sc,`${ic} ${n.d.n}${mk?' '+mk:''}`,mk==='❗'||mk==='✔'?'#ffe28a':'#e8f0ff',11);
   }
 });

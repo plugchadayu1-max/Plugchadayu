@@ -49,7 +49,9 @@ const BUFFS={
   fog:{n:'หมอกปีศาจ',ic:'🌫️',g:'fog',b:{exp:.4}},
   scrollExp:{n:'ม้วน EXP',ic:'📜',g:'scroll',b:{exp:.3}},
   scrollAtk:{n:'ม้วนพลัง',ic:'📕',g:'scroll',b:{atk:.15}},
-  scrollDef:{n:'ม้วนเกราะ',ic:'📘',g:'scroll',b:{hp:.15,def:8}}
+  scrollDef:{n:'ม้วนเกราะ',ic:'📘',g:'scroll',b:{hp:.15,def:8}},
+  potExp15:{n:'ยา EXP x1.5',ic:'🧪',g:'potexp',b:{exp:.5}},
+  potExp2:{n:'ยา EXP x2',ic:'⚗️',g:'potexp',b:{exp:1}}
 };
 function dxBuffList(){return(P&&P.dx&&P.dx.buffs)||[]}
 function addBuff(id,mins){
