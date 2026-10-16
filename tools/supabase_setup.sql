@@ -57,12 +57,13 @@ begin
         + coalesce((s#>>'{stats,vit}')::numeric,0) + coalesce((s#>>'{stats,int}')::numeric,0) + coalesce((s->>'pts')::numeric,0);
   if nlv < 1 or nlv > 200 then raise exception 'cheat: level'; end if;
   if nz < 0 then raise exception 'cheat: zeny'; end if;
-  if ssum > 20 + 3*nlv then raise exception 'cheat: stats'; end if;     -- แต้มสถานะรวมเกินที่เลเวลนี้ควรมี
+  if ssum > 20 + 3*(nlv + 200*least(coalesce((s->>'rb')::int,0),50)) then raise exception 'cheat: stats'; end if;     -- แต้มสถานะรวมเกินที่เลเวลนี้ควรมี
   if tg_op = 'INSERT' then
     if exists (select 1 from public.game_saves where player_id = new.player_id and slot = new.slot) then
       new.updated_at := now(); return new;                              -- upsert ของแถวเดิม -> ไปตรวจที่ขั้น UPDATE
     end if;
-    if nlv > 99 or nz > 1000000000 then raise exception 'cheat: new save too strong'; end if;   -- ตัวละครใหม่เริ่มที่ Lv 99 + 999 ล้าน Zeny (+เผื่อรางวัลความสำเร็จเลเวลที่ปลดทันที)
+    if nlv > 99 or nz > 1000000000 then raise exception 'cheat: new save too strong'; end if;
+    if coalesce((s->>'rb')::int,0) > 0 then raise exception 'cheat: new save rebirth'; end if;   -- ตัวละครใหม่เริ่มที่ Lv 99 + 999 ล้าน Zeny (+เผื่อรางวัลความสำเร็จเลเวลที่ปลดทันที)
   else
     o := old.save_data;
     olv := coalesce((o->>'lv')::int, 1); oz := coalesce((o->>'zeny')::numeric, 0);
@@ -70,6 +71,9 @@ begin
     if nlv > olv + 3 + el/3600*12 then raise exception 'cheat: level jump'; end if;                -- เลเวลขึ้นเร็วเกินจริง
     if nz > oz + 5000 + el*(30 + nlv*12) then raise exception 'cheat: zeny jump'; end if;          -- เงินเพิ่มเร็วเกินจริง
     if coalesce((s->>'kills')::numeric,0) < coalesce((o->>'kills')::numeric,0) then raise exception 'cheat: kills'; end if;
+    if coalesce((s->>'rb')::int,0) > coalesce((o->>'rb')::int,0) + 1 then raise exception 'cheat: rebirth'; end if;   -- จุติได้ทีละครั้ง
+    if coalesce((s->>'rb')::int,0) < coalesce((o->>'rb')::int,0) then raise exception 'cheat: rebirth down'; end if;
+    if coalesce((s->>'rb')::int,0) > coalesce((o->>'rb')::int,0) and olv < 200 then raise exception 'cheat: rebirth lv'; end if;   -- จุติได้เมื่อเซฟก่อนหน้าอยู่ Lv200
   end if;
   new.updated_at := now();
   return new;

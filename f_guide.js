@@ -113,7 +113,7 @@ function guideList(){
   const act=Object.values(P.qs).filter(s=>s.s===1).length,avail=QUESTS.filter(q=>!P.qs[q.id]&&q.lv<=P.lv+2);
   if(avail.length&&act<6)add('📜',`มีเควสต์ให้รับ ${avail.length} อัน (เหมาะกับเลเวลคุณ)`,'ดู',"QU.tab='quest';toggleWin('winQuest')",6);
   if(typeof dgRuns==='function'&&P.lv>=15&&dgRuns()>0)add('🕳️',`ดันเจี้ยนวันนี้เหลือ ${dgRuns()} รอบ (เลือกพร ได้ EXP/ไอเทม)`,'เข้า',"toggleWin('winDg')",7);
-  if(P.mats.ore>=8&&P.eq.weapon&&(P.eq.weapon.plus||0)<8)add('⚒️',`มีแร่ ${P.mats.ore} ก้อน — ตีบวกอาวุธที่ช่างตีเหล็กในเมือง`,'ดู',"toggleWin('winSmith')",8);
+  if(P.mats.ore>=8&&P.eq.weapon&&(P.eq.weapon.plus||0)<ENH_MAX)add('⚒️',`มีแร่ ${P.mats.ore} ก้อน — ตีบวกอาวุธที่ช่างตีเหล็กในเมือง`,'ดู',"toggleWin('winSmith')",8);
   if(typeof autoWantMap==='function'){const w=autoWantMap();if(w!==MAPID&&!MAP.dungeon)add('🗺️',`เลเวลคุณเหมาะกับ ${MAPS[w].name} แล้ว`,'วาร์ป',"toggleWin('winWarp')",4)}
   if(P.dx.stat.fish<3)add('🎣','ลองตกปลา/ทำอาหารให้บัฟเพิ่มพลัง','ลอง',"LF.tab='fish';toggleWin('winLife')",9);
   L.sort((a,b)=>a.pr-b.pr);

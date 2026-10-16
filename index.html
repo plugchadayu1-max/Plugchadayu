@@ -76,6 +76,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 #winBag .pn .cp small{color:#ffd27a;font-size:11px}
 .es,.bs{position:absolute;width:64px;height:64px;background:#0b0d18;border:3px solid #39406a;box-shadow:inset 0 0 0 2px #000,2px 2px 0 rgba(0,0,0,.5);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .es img,.bs img{width:48px;height:48px;image-rendering:pixelated}
+.es img[src^="data:image/webp"],.bs img[src^="data:image/webp"]{image-rendering:auto;object-fit:contain}
 .es .ph{opacity:.22;filter:grayscale(1)}
 .es .lb{position:absolute;bottom:-1px;left:0;right:0;text-align:center;font-size:9px;color:#9aa3c8;text-shadow:1px 1px 0 #000}
 .bs{position:relative}
@@ -318,6 +319,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 <div id="winSkill"></div>
 <div id="winQuest" class="win panel"></div>
 <div id="winSmith" class="win panel sm"></div>
+<div id="winRb" class="win panel"></div>
 <div id="winWarp" class="win panel sm" style="z-index:5"></div>
 <div id="winJob" class="win panel sm" style="z-index:5"></div>
 <div id="winRank" class="win panel sm" style="z-index:5"></div>
@@ -352,6 +354,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 <script src="pets_sprites.js?v=2"></script>
 <script src="thunder_sprites.js?v=2"></script>
 <script src="newclass_sprites.js?v=2"></script>
+<script src="equip_icons.js?v=1"></script>
 <script>
 'use strict';
 /* ---- hooks: f_*.js ที่โหลดทีหลังจะประกาศฟังก์ชันชื่อเดียวกันทับ (ถ้าไฟล์เหล่านั้นโหลดไม่ขึ้น เกมหลักยังเล่นได้) ---- */
@@ -2032,6 +2035,7 @@ const ICON_TPL={
 const RAR=[{n:'ธรรมดา',g:'#c8ccd4',G:'#7d8894',m:1},{n:'ดี',g:'#6fdc6f',G:'#2f8a3a',m:1.35},{n:'หายาก',g:'#6fb2ff',G:'#2a5fb8',m:1.75},{n:'มหากาพย์',g:'#cf8bff',G:'#7a3ab8',m:2.3}];
 const ICON_CACHE={};
 function iconURL(tpl,rar=0,pot){
+  if(window.EQUIP_IMG&&EQUIP_IMG[tpl])return EQUIP_IMG[tpl];   // ภาพอุปกรณ์จริง (equip_icons.js) แทนพิกเซล 12x12
   const key=tpl+rar+(pot||'');if(ICON_CACHE[key])return ICON_CACHE[key];
   const R=RAR[rar],pal={o:'#14100c',m:'#cfd6de',M:'#7d8894',s:'#ffffff',w:'#9a6a35',W:'#5e3d1e',l:'#9a6a3e',L:'#5e3d20',y:'#f2c94c',g:R.g,G:R.G,
     p:pot==='sp'?'#4a8fe0':'#e0524f',P:pot==='sp'?'#24508f':'#8a2420'};
@@ -2043,7 +2047,7 @@ function iconURL(tpl,rar=0,pot){
 const SLOTS={helmet:{n:'หมวก',ic:'helmet'},necklace:{n:'สร้อยคอ',ic:'necklace'},armor:{n:'เกราะ',ic:'armor'},boots:{n:'รองเท้า',ic:'boots'},
   weapon:{n:'อาวุธ',ic:'sword'},gloves:{n:'ถุงมือ',ic:'gloves'},ring:{n:'แหวน',ic:'ring'},charm:{n:'เครื่องราง',ic:'charm'}};
 const SLOT_L=['helmet','necklace','armor','boots'],SLOT_R=['weapon','gloves','ring','charm'];
-const WEAPON={warrior:{n:'ดาบ',ic:'sword'},mage:{n:'คทากะโหลก',ic:'staff'},archer:{n:'ธนู',ic:'bow'},rogue:{n:'ปืนคู่',ic:'gun'},thunder:{n:'ทวนสายฟ้า',ic:'staff'},boxer:{n:'นวมมวย',ic:'gloves'},sumthunder:{n:'คทาสายฟ้า',ic:'staff'},sumdark:{n:'คทามืด',ic:'staff'}};
+const WEAPON={warrior:{n:'ดาบ',ic:window.EQUIP_IMG?'w_sword':'sword'},mage:{n:'คทากะโหลก',ic:window.EQUIP_IMG?'w_orb':'staff'},archer:{n:'ธนู',ic:window.EQUIP_IMG?'w_bow':'bow'},rogue:{n:'ปืนคู่',ic:window.EQUIP_IMG?'w_gun':'gun'},thunder:{n:'ทวนสายฟ้า',ic:window.EQUIP_IMG?'w_wing':'staff'},boxer:{n:'นวมมวย',ic:window.EQUIP_IMG?'w_gloves':'gloves'},sumthunder:{n:'คทาสายฟ้า',ic:window.EQUIP_IMG?'w_wing':'staff'},sumdark:{n:'คทามืด',ic:window.EQUIP_IMG?'w_orb':'staff'}};
 const TIER=[[8,'ฝึกหัด'],[20,'เหล็ก'],[32,'เงิน'],[45,'ทองคำ'],[60,'มิธริล'],[75,'อาคม'],[90,'มังกร'],[999,'ราชันย์']];
 const STAT_N={atk:'โจมตี',def:'ป้องกัน',hp:'HP',sp:'SP',crit:'คริติคอล %',spd:'ความเร็ว'};
 const BAG_MAX=100;
@@ -2399,8 +2403,8 @@ const ACH=[
   {id:'a_epic',n:'ตำนานเปิดฉาก',d:'ได้อุปกรณ์ความหายากสูงสุด',f:()=>P.st.epic>=1,r:{zeny:2000}},
   {id:'a_q5',n:'ผู้รับใช้ชาวบ้าน',d:'ทำเควสต์สำเร็จ 5 อัน',f:()=>P.st.q>=5,r:{zeny:1000,ore:4}}
 ];
-const ENH_MAX=8;
-const enhCost=it=>{const p=it.plus||0;return{ore:2+p*2,gem:p>=4?1:0,zeny:Math.round((60+it.lv*12)*(p+1)),rate:[1,1,1,.85,.7,.55,.4,.3][p]||.3}};
+const ENH_MAX=15;
+const enhCost=it=>{const p=it.plus||0;return{ore:2+p*2,gem:p>=4?1+(p>=9?1:0)+(p>=12?1:0):0,zeny:Math.round((60+it.lv*12)*(p+1)),rate:[1,1,1,.85,.7,.55,.4,.3,.26,.22,.18,.15,.12,.1,.08][p]||.08}};
 const CRAFTS=[{n:'ยาแดง x5',ore:1,zeny:60,f:()=>P.pot.hp+=5},{n:'ยาน้ำเงิน x5',ore:1,zeny:90,f:()=>P.pot.sp+=5},
   {n:'ยาแดง x20 (ชุดใหญ่)',ore:3,zeny:200,f:()=>P.pot.hp+=20},{n:'หินเวท x1',ore:10,zeny:200,f:()=>P.mats.gem++}];
 const QU={tab:'quest'},SM={tab:'enh'};
@@ -2647,7 +2651,7 @@ function save(manual){
   if(NOSAVE)return;
   try{
     const o={cls:P.cls,lv:P.lv,exp:P.exp,pts:P.pts,zeny:P.zeny,pot:P.pot,stats:P.stats,kills:P.kills,hp:P.hp,sp:P.sp,x:P.x,y:P.y,map:P.map,bag:P.bag,eq:P.eq,skLv:P.skLv,uidn:P.uidn,qs:P.qs,daily:P.daily,ach:P.ach,st:P.st,mats:P.mats,t:Date.now(),auto:AUTO.on,
-      job:P.job,tm:P.tm,pets:P.pets,pet:P.pet,title:P.title,dg:P.dg,rankSeed:P.rankSeed,sty:P.sty,dx:P.dx};
+      job:P.job,tm:P.tm,pets:P.pets,pet:P.pet,title:P.title,dg:P.dg,rankSeed:P.rankSeed,sty:P.sty,dx:P.dx,rb:P.rb||0,rbq:P.rbq||null};
     localStorage.setItem(KEY,JSON.stringify(o));if(manual)say('บันทึกเกมแล้ว','#9be58a')
   }catch(e){if(manual)say('บันทึกไม่ได้ในเบราว์เซอร์นี้','#ff9d9a')}
 }
@@ -2749,6 +2753,8 @@ function loop(t){const now=Date.now(),gap=(now-lastWall)/1000;lastWall=now;
 </script>
 <!-- ฟีเจอร์เสริม: ต้องโหลดต่อจากสคริปต์หลักทันที (ประกาศ hook ทับก่อนเกมเริ่มทำงาน) -->
 <script src="f_audio_combat.js?v=7"></script>
+<script src="f_rebirth.js?v=1"></script>
+<script src="f_smith2.js?v=1"></script>
 <script src="f_progress.js?v=26"></script>
 <script src="f_world.js?v=11"></script>
 <script src="f_style.js?v=10"></script>

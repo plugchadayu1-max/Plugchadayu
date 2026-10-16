@@ -256,7 +256,8 @@ const NPCS=[
   {id:'sage',n:'ปราชญ์ลูน่า',cls:'mage',sty:{dye:'purple',hat:'halo'},act:'story'},
   {id:'fisher',n:'ลุงปลา',cls:'warrior',sty:{shirt:'blue',hair:'brown',skin:'brown',hat:'straw',dye:'teal'},act:'fish'},
   {id:'cook',n:'ป้าใบ',cls:'rogue',sty:{dye:'green',hair:'black',hat:'flowers'},act:'cook'},
-  {id:'merchant',n:'พ่อค้าเร่ ฮันส์',cls:'rogue',sty:{dye:'orange',hair:'brown',hat:'tophat',back:'capeR'},act:'shop'}
+  {id:'merchant',n:'พ่อค้าเร่ ฮันส์',cls:'rogue',sty:{dye:'orange',hair:'brown',hat:'tophat',back:'capeR'},act:'shop'},
+  {id:'rebirth',n:'เทพีเอลิน (จุติ)',cls:'mage',sty:{dye:'orange',hair:'silver',hat:'halo'},act:'rebirth'}
 ];
 const NP=[];let npMap='';
 function npcSpawn(){
@@ -287,6 +288,7 @@ REG.tick.push((dt)=>{
 });
 function npcOpen(d){
   if(d.act==='story'){openStory();return}
+  if(d.act==='rebirth'){rbOpen();return}
   LF.tab=d.act;if($('winLife').style.display!=='block')toggleWin('winLife');else refreshLife();
 }
 addEventListener('pointerdown',e=>{
@@ -311,13 +313,14 @@ function npcMark(n){
   const S=P.dx.story,c=STORY[S.ch];
   if(n.d.act==='story')return c&&(S.st===2?'✔':(S.st===0&&P.lv>=c.lv)?'❗':S.st===1?'…':'');
   if(n.d.act==='shop')return P.dx.seen.shopSeen!==slotNow()?'❗':'';
+  if(n.d.act==='rebirth')return rbMark();
   return '';
 }
 REG.names.push((TX,sc)=>{
   if(!P||!P.dx)return;
   for(const n of NP){
     const hL=Math.round(CLASSES[n.d.cls].h/A),x=sxL(n.x),y=syL(n.y)-hL-(n.d.sty.hat&&n.d.sty.hat!=='none'?22:10);if(x<-60||x>LW+60||y<-30||y>LH+30)continue;
-    const mk=npcMark(n),ic={story:'📖',fish:'🎣',cook:'🍲',shop:'🛒'}[n.d.act];
+    const mk=npcMark(n),ic={story:'📖',fish:'🎣',cook:'🍲',shop:'🛒',rebirth:'🌟'}[n.d.act];
     TX(x*sc,y*sc,`${ic} ${n.d.n}${mk?' '+mk:''}`,mk==='❗'||mk==='✔'?'#ffe28a':'#e8f0ff',11);
   }
 });
