@@ -47,7 +47,7 @@ function cloudStatus(){
   const e=$('cloudSt');if(!e)return;
   if(!SESS){e.textContent='';return}
   const t=CLOUD.at?new Date(CLOUD.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'-';
-  e.innerHTML=`☁ ${emailToUser(SESS.user.email)}<br>${CLOUD.ok===false?'<span style="color:#ff9d9a">⚠ ซิงค์ไม่สำเร็จ (จะลองใหม่)</span>':`ซิงค์ล่าสุด ${t}`}`;
+  e.innerHTML=`☁ ${emailToUser(SESS.user.email)}<br>${CLOUD.ok===false?'<span style="color:#ff9d9a">⚠ ซิงค์ไม่สำเร็จ${CLOUD.why?' ('+CLOUD.why+')':''} (จะลองใหม่)</span>':`ซิงค์ล่าสุด ${t}`}`;
 }
 async function cloudPush(keep){
   if(!SESS||NOSAVE||CLOUD.pushing&&!keep)return;
@@ -66,6 +66,7 @@ async function cloudPush(keep){
     lbPush();
   }catch(e){
     CLOUD.ok=false;if(e&&e.status===401)SESS&&(SESS.expires_at=0);
+    CLOUD.why=/cheat/.test(e&&e.tx||'')?'เซิร์ฟเวอร์ปฏิเสธข้อมูล':e&&e.status===401?'เซสชันหมดอายุ':e&&e.status?'เซิร์ฟเวอร์ตอบกลับ '+e.status:'อินเทอร์เน็ตหลุด/สัญญาณอ่อน';
     // เซิร์ฟเวอร์ตรวจพบข้อมูลผิดปกติ (ระบบกันโกงใน Supabase) -> แจ้งผู้เล่น ไม่ลองซ้ำรัวๆ
     if(e&&/cheat/.test(e.tx||'')){CLOUD.rej=true;CLOUD.last=Date.now()+120000;if(typeof say==='function'&&P)say('⚠ เซิร์ฟเวอร์ปฏิเสธการบันทึก: พบข้อมูลที่ผิดปกติ (เลเวล/เงินเพิ่มเร็วเกินจริง)','#ff8a85')}
   }
