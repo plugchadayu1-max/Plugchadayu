@@ -18,13 +18,14 @@
     if(I.bld_shop)ART.shop=hdArt(I.bld_shop,110);
     if(I.bld_smith)ART.smith=hdArt(I.bld_smith,92);
     if(I.bld_hut)ART.hut=hdArt(I.bld_hut,88);
-    if(I.bld_shrine)ART.shrine=hdArt(I.bld_shrine,96);
+    if(I.bld_shrine)ART.shrine=hdArt(I.bld_shrine,86);
     if(window.CASTLE_IM&&CASTLE_IM.width>300)ART.castle=hdArt(CASTLE_IM,150);
     // ของประดับทะเลทราย (ตัดจากภาพแมพใหม่)
     const D=[['prop_cactus','dcactus'],['prop_crysG1','dcrys1'],['prop_crysG2','dcrys2'],['prop_bush2','dbush'],['prop_tree','dtree']];
     for(const [k,n] of D)if(I[k]){ART[n]=hdArt(I[k],k==='prop_tree'?34:(ART2[k+'_w']||24));if(typeof MAPS!=='undefined'&&MAPS.desert&&!MAPS.desert.deco.includes(n))MAPS.desert.deco.push(n)}
   });
 })();
+
 
 
 

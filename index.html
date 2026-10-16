@@ -1088,10 +1088,12 @@ function buildMap(id){
   // 5) เมือง: กรอบ, ร้านค้า, ประตูวาร์ป, กองไฟ, ถัง
   let x0=1e9,y0=1e9,x1=0,y1=0;for(let cy=0;cy<GN;cy++)for(let cx=0;cx<GN;cx++)if(gc(cx,cy)==='H'){x0=Math.min(x0,cx*CELL);y0=Math.min(y0,cy*CELL);x1=Math.max(x1,(cx+1)*CELL);y1=Math.max(y1,(cy+1)*CELL)}
   const town={x0,y0,x1,y1,cx:(x0+x1)/2,cy:(y0+y1)/2};
+  const blockBase=(wx,wy,wArt)=>{const bx=Math.round(wx/A),by=Math.round(wy/A),hw=Math.round(wArt/2);for(let yy=by-5;yy<=by;yy++)for(let xx=bx-hw;xx<=bx+hw;xx++)if(xx>=0&&yy>=0&&xx<GW&&yy<GH)ter[yy*GW+xx]=8};
   // ปราสาทใหญ่กลางเมืองด้านบน (ชนได้ตรงฐาน) • ร้าน/ป้ายเควสต์/ช่างตีเหล็กอยู่ด้านล่างปราสาท
   if(M.dungeon){   // ดันเจี้ยน: เมืองเล็ก ไม่มีปราสาท/รั้ว (ผังเดิม)
     town.slots={fire:[{x:town.cx-120,y:town.cy+40},{x:town.cx+120,y:town.cy+40}],spawn:{x:town.cx,y:town.cy+60},npc:{}};town.spawnY=town.cy+60;
-    pr.push({k:'shop',x:town.cx,y:y0+130},{k:'quest',x:town.cx-150,y:y0+150},{k:'smith',x:town.cx+150,y:y0+150});
+    pr.push({k:'shop',x:town.cx-30,y:y0+170},{k:'quest',x:town.cx-330,y:y0+190},{k:'smith',x:town.cx+300,y:y0+190});
+    for(const p of pr.slice(-3))blockBase(p.x,p.y,ART[p.k].width*(p.k==='quest'?.7:.8));
   }else{
   const CAS=ART.castle,cax=town.cx,cay=y0+90+(CAS.height-4)*A*.85;
   pr.push({k:'castle',x:cax,y:cay});
@@ -1099,14 +1101,15 @@ function buildMap(id){
   // ผังเมือง (ค่าเทียบจากกึ่งกลาง cx และขอบบน y0): แถว NPC ใต้ปราสาท → แถวร้านค้า/ป้ายเควสต์/ช่างตีเหล็ก → กองไฟ/ประตูดันเจี้ยน/ประตูวาร์ปด้านล่าง
   const S=(dx,dy)=>({x:town.cx+dx,y:y0+dy});
   town.slots={
-    shop:S(0,800),quest:S(-420,800),smith:S(420,800),dungeon:S(420,1070),
-    fire:[S(-210,930),S(210,930)],spawn:S(0,1010),
-    npc:{elder:S(-420,590),sage:S(-150,590),merchant:S(150,590),cook:S(420,590),fisher:S(-420,1330),rebirth:S(0,1385),smith:S(420,890),guide:S(-420,890)}};
+    shop:S(0,760),quest:S(-420,760),smith:S(420,760),dungeon:S(420,1110),hut:S(-420,1090),shrine:S(0,1100),
+    fire:[S(-210,900),S(210,900)],spawn:S(0,900),
+    npc:{elder:S(-420,520),sage:S(-150,520),merchant:S(150,520),cook:S(420,520),guide:S(-420,880),smith:S(420,880),fisher:S(-420,1210),rebirth:S(0,1220)}};
   town.spy=town.slots.spawn.y-town.cy+60;   // ใช้แทน cy+60 ตอนเกิด/กลับเมือง (TOWN.cy+TOWN.spy-60 ไม่ใช้ — เก็บเป็น y จริงด้านล่าง)
   town.spawnY=town.slots.spawn.y;
   pr.push({k:'shop',x:town.slots.shop.x,y:town.slots.shop.y});
   pr.push({k:'quest',x:town.slots.quest.x,y:town.slots.quest.y},{k:'smith',x:town.slots.smith.x,y:town.slots.smith.y});
-  if(ART.hut)pr.push({k:'hut',x:town.cx-420,y:y0+1270},{k:'shrine',x:town.cx,y:y0+1320});   // กระท่อมลุงปลา + ศาลเทพีเอลิน (จุติ) — f_art2.js
+  if(ART.hut)pr.push({k:'hut',x:town.slots.hut.x,y:town.slots.hut.y},{k:'shrine',x:town.slots.shrine.x,y:town.slots.shrine.y});
+  for(const p of pr.filter(q=>['shop','smith','hut','shrine'].includes(q.k)))blockBase(p.x,p.y,ART[p.k].width*.8);   // ฐานอาคารชนได้ (ไม่บล็อกทางเดิน)   // กระท่อมลุงปลา + ศาลเทพีเอลิน (จุติ) — f_art2.js
   // รั้วไม้รอบเมือง: เว้นประตูกว้าง 4 ช่องกลางแต่ละด้านที่ด้านนอกเป็นพื้นเดินได้ (ไม่มี = เปิดครบ 4 ด้าน) • รั้วชนได้
   {const F=8,sd=[['t',town.cx,y0+F],['b',town.cx,y1-F],['l',x0+F,town.cy],['r',x1-F,town.cy]],
     outOK=s=>{const ox=s[0]==='l'?x0-CELL/2:s[0]==='r'?x1+CELL/2:s[1],oy=s[0]==='t'?y0-CELL/2:s[0]==='b'?y1+CELL/2:s[2];return !BLOCK[TT[gc(Math.floor(ox/CELL),Math.floor(oy/CELL))]]};
@@ -2780,7 +2783,7 @@ function loop(t){const now=Date.now(),gap=(now-lastWall)/1000;lastWall=now;
 <script src="f_audio_combat.js?v=7"></script>
 <script src="f_rebirth.js?v=2"></script>
 <script src="f_smith2.js?v=1"></script>
-<script src="f_art2.js?v=4"></script>
+<script src="f_art2.js?v=5"></script>
 <script src="f_progress.js?v=26"></script>
 <script src="f_world.js?v=11"></script>
 <script src="f_style.js?v=10"></script>
