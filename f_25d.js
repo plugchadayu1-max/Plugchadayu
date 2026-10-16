@@ -112,8 +112,8 @@ function updateCam(dt){
   // ไม่ให้กล้องเลยขอบแผนที่มากเกินไป
   const W=groundCv.width,H=groundCv.height,mx=Math.min(W/2,LW*.32),mz=Math.min(H/2,LH*.3);
   if(!lock){tx=clamp(tx,mx,W-mx);tz=clamp(tz,mz*.6,H-mz)}   // ล็อก: ไม่จำกัดที่ขอบแมพ ตัวละครอยู่กลางจอเสมอ
-  const d=distCam(),shk=shake>0?(Math.random()-.5)*shake*.7:0;
-  cam3.position.set(tx+shk,Math.sin(PHI)*d,tz+Math.cos(PHI)*d+shk*.5);
+  const d=distCam(),on3=typeof SHAKE_ON==='undefined'||SHAKE_ON,sk3=on3?shake:0,shk=sk3>0?(Math.random()-.5)*sk3*.7:0,bob3=on3&&walkSpd>25?Math.sin(time*16)*.5:0;
+  cam3.position.set(tx+shk,Math.sin(PHI)*d+bob3,tz+Math.cos(PHI)*d+shk*.5);
   cam3.lookAt(tx,0,tz);
 }
 function fit(){

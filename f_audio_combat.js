@@ -68,6 +68,9 @@ function toggleSound(){
   $('bSnd').textContent=SND.on?'🔊':'🔇';if(SND.on){actx();sfx('click')}toast(SND.on?'🔊 เปิดเสียง':'🔇 ปิดเสียง');
 }
 $('bSnd').textContent=SND.on?'🔊':'🔇';$('bSnd').onclick=toggleSound;
+function paintShk(){const b=$('bShk');if(b){b.style.opacity=SHAKE_ON?1:.45;b.textContent=SHAKE_ON?'📳':'📴'}}
+function toggleShake(){SHAKE_ON=!SHAKE_ON;try{localStorage.setItem('mq_shake',SHAKE_ON?'1':'0')}catch(e){}paintShk();if(!SHAKE_ON)shake=0;toast(SHAKE_ON?'📳 เปิดจอสั่น (ตอนเดิน/ใช้สกิล)':'📴 ปิดจอสั่น ภาพนิ่ง')}
+if($('bShk')){$('bShk').onclick=toggleShake;paintShk()}
 // ปุ่ม UI ทุกปุ่มมีเสียงคลิก
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('button'))sfx('click')},true);
 

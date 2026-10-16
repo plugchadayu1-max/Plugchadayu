@@ -281,6 +281,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   <button class="btn" id="bMenu">☰ เมนู</button>
   <button class="btn" id="bAuto">ออโต้ (Z)</button>
   <button class="btn" id="bSnd" title="เปิด/ปิดเสียง (M)">🔊</button>
+  <button class="btn" id="bShk" title="เปิด/ปิดจอสั่น (ตอนเดิน/ใช้สกิล)">📳</button>
   <div id="menuPanel" class="panel">
     <div class="mg"><div class="mh">👤 ตัวละคร</div><div class="mb">
       <button class="btn" id="bChar">ตัวละคร (C)</button><button class="btn" id="bBag">เป้ (I)</button>
@@ -1136,7 +1137,7 @@ function drawFire(f){
 
 /* ============ state ============ */
 let P=null,mobs=[],floats=[],fx=[],projs=[];
-let time=0,cam={x:0,y:0},shake=0;
+let time=0,cam={x:0,y:0},shake=0,walkSpd=0,SHAKE_ON=true;try{SHAKE_ON=localStorage.getItem('mq_shake')!=='0'}catch(e){}
 const POTS={hp:{n:'ยาแดง',ic:'🧪',price:45,heal:70},sp:{n:'ยาน้ำเงิน',ic:'💧',price:70,heal:36}};
 // EXP ที่ต้องใช้ต่อเลเวล: ชันขึ้นเรื่อยๆ (Lv1 50, Lv20 ~14,700, Lv40 ~67,000, Lv100 ~505,000)
 const need=lv=>Math.floor(20*Math.pow(lv,2.2)+30*lv);
@@ -1646,7 +1647,7 @@ function update(dt){
       // แผนที่ที่ยังไม่เคยเข้าต้องสร้างภาพก่อน (~1 วิ) -> แสดงข้อความแล้วค่อยย้าย
       P.portalCd=99;P.dest=null;sfx('warp');toast(`✨ เดินทางไป ${M2.ic} ${M2.name}...`);ring(P.x,P.y,60,PORTAL_COL[p.to][1],.6);
       setTimeout(()=>enterMap(p.to),MAP_CACHE[p.to]?60:120);break}
-    if(spd>25)loopAnim(P.actor,'walk',clamp(spd/170,.6,1.4));else loopAnim(P.actor,'idle');
+    walkSpd=spd;if(spd>25)loopAnim(P.actor,'walk',clamp(spd/170,.6,1.4));else loopAnim(P.actor,'idle');
   }
   tickActor(P.actor,dt);
   // มอนสเตอร์
@@ -1775,8 +1776,8 @@ function pxSlash(cx,cy,R,a0,a1,col,alpha){
 }
 function render(){
   // กล้อง (ปัดเป็นพิกเซลอาร์ตทั้งหมด ภาพจะไม่สั่น/เบลอ)
-  const sh=shake>0?Math.round((Math.random()-.5)*shake):0;
-  CX=Math.round(cam.x/A)+sh;CY=Math.round(cam.y/A)+(shake>0?Math.round((Math.random()-.5)*shake):0);
+  const sk=SHAKE_ON?shake:0,sh=sk>0?Math.round((Math.random()-.5)*sk):0,bob=SHAKE_ON&&walkSpd>25?Math.round(Math.sin(time*16)):0;   // จอสั่นตอนสกิล/เดิน (ปิดได้ที่ปุ่ม 📳)
+  CX=Math.round(cam.x/A)+sh;CY=Math.round(cam.y/A)+(sk>0?Math.round((Math.random()-.5)*sk):0)+bob;
   lx.setTransform(LM,0,0,LM,0,0);lx.imageSmoothingEnabled=false;
   lx.fillStyle='#0d1016';lx.fillRect(0,0,LW,LH);
   lx.drawImage(groundCv,CX,CY,LW,LH,0,0,LW,LH);
@@ -2747,7 +2748,7 @@ function loop(t){const now=Date.now(),gap=(now-lastWall)/1000;lastWall=now;
 })();
 </script>
 <!-- ฟีเจอร์เสริม: ต้องโหลดต่อจากสคริปต์หลักทันที (ประกาศ hook ทับก่อนเกมเริ่มทำงาน) -->
-<script src="f_audio_combat.js?v=6"></script>
+<script src="f_audio_combat.js?v=7"></script>
 <script src="f_progress.js?v=26"></script>
 <script src="f_world.js?v=11"></script>
 <script src="f_style.js?v=10"></script>
@@ -2764,6 +2765,6 @@ function loop(t){const now=Date.now(),gap=(now-lastWall)/1000;lastWall=now;
 <script src="f_skin.js?v=8"></script>
 <script src="f_manual.js?v=8"></script>
 <script src="f_summon.js?v=3"></script>
-<script src="f_25d.js?v=13"></script>
+<script src="f_25d.js?v=14"></script>
 </body>
 </html>
