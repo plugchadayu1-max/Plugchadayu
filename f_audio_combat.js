@@ -49,6 +49,7 @@ function sfx(n,a){
     case 'skill':{const b=260+(a||0)*110;tone(b,.28,'sawtooth',.09,520);noise(.22,.1,3200,.04);break}
     case 'kill':tone(330,.08,'triangle',.1);tone(494,.1,'triangle',.1,0,.07);break;
     case 'boss':[392,330,262,196].forEach((f,i)=>tone(f,.4,'sawtooth',.1,-20,i*.1));noise(.5,.12,500);break;
+    case 'bosskill':[523,392,659,523,784,1047].forEach((f,i)=>tone(f,.3,i%2?'triangle':'sawtooth',.11,0,i*.12));noise(.6,.1,700,.1);tone(131,1.1,'sine',.12);break;
     case 'hurt':tone(150,.16,'sawtooth',.12,-70);noise(.08,.08,900);break;
     case 'levelup':[523,659,784,1047,1319].forEach((f,i)=>tone(f,.22,'sine',.13,0,i*.09));break;
     case 'loot':{const r=a||0;[880,1175,1568].slice(0,r>=2?3:2).forEach((f,i)=>tone(f,.14,'triangle',.09,0,i*.07));if(r>=3){tone(1760,.5,'sine',.1,0,.25)}break}
@@ -78,7 +79,8 @@ document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('but
 const BGM={mode:'',step:0,next:0};
 const BGMD={town:{sc:[0,2,4,7,9,12,9,7,4,2,0,4,7,12,9,7],base:261.6,len:.46,type:'sine',v:.05,bass:[0,0,-3,-5]},
   field:{sc:[0,3,5,7,10,12,10,7,5,3,0,-2,0,3,7,3],base:220,len:.32,type:'triangle',v:.045,bass:[0,0,-4,-2]},
-  boss:{sc:[0,1,3,0,6,5,3,1,0,1,3,6,8,6,5,3],base:130.8,len:.19,type:'sawtooth',v:.04,bass:[0,0,0,-2]}};
+  boss:{sc:[0,1,3,0,6,5,3,1,0,1,3,6,8,6,5,3],base:130.8,len:.19,type:'sawtooth',v:.04,bass:[0,0,0,-2]},
+  sky:{sc:[0,4,7,12,14,12,7,4,7,11,14,19,14,11,7,4],base:293.7,len:.5,type:'sine',v:.05,bass:[0,-5,-7,-2]}};
 function bgmTick(){
   const c=SND.ctx;if(!c||!SND.on||c.state!=='running'||!BGM.mode)return;
   const m=BGMD[BGM.mode];if(BGM.next<c.currentTime)BGM.next=c.currentTime+.05;
@@ -92,6 +94,7 @@ function bgmTick(){
 }
 setInterval(bgmTick,160);
 function bgmMode(){
+  if(MAP.skyMap)return 'sky';
   if(MAP.dungeon)return 'boss';
   if(inTown(P.x,P.y))return 'town';
   for(const m of mobs)if(m.d.boss&&!m.dead&&m.aggro&&dist(m,P)<800)return 'boss';

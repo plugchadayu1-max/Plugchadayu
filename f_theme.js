@@ -108,14 +108,15 @@ body .card.slot.lock{opacity:.6;cursor:not-allowed}body .card.slot.lock:hover{tr
 
 /* ---------- แผนที่โลก (วาร์ป) ---------- */
 const WM={sel:null,timer:0,thumbs:{}};
-const WM_POS={forest:[96,268],desert:[262,272],snow:[96,80],deepwood:[262,74],ruinvillage:[428,84],lava:[430,268]};
+const WM_POS={forest:[96,268],desert:[262,272],snow:[96,80],deepwood:[262,74],ruinvillage:[428,84],lava:[430,268],sky:[262,172]};
 const WM_DESC={forest:'ป่าทึบริมทะเลสาบ จุดเริ่มต้นของนักผจญภัย มีหมู่บ้านและมอนสเตอร์เบาๆ ให้ฝึกมือ',
   desert:'ทะเลทรายร้อนระอุเต็มไปด้วยแมงป่อง ปีศาจ และซากโบราณ ซ่อนผนึกที่สองไว้ใต้ผืนทราย',
   snow:'ดินแดนน้ำแข็งเลือดที่อันตรายที่สุด เป็นรังของอัศวินมรณะ ราชันย์กระดูก และมังกรแห่งหายนะ',
   deepwood:'ป่าลึกที่ถูกเหวมืดล้อมรอบ ทางเดินคดเคี้ยวเต็มไปด้วยสัตว์ป่าเงาและเอนท์พิษ มีราชันย์ต้นไม้ผู้ตื่นซ่อนอยู่ปลายทาง',
   ruinvillage:'หมู่บ้านร้างริมสระที่ถูกปีศาจเพลิงยึดครอง เศษบ้านเรือนกลายเป็นรังของจอมมารผู้ล่มหมู่บ้าน',
-  lava:'ทุ่งลาวาเดือดพล่าน แม่น้ำลาวาและสะพานหิน มอนสเตอร์โหดกว่าแมพอื่น เกิดเป็นกองใหญ่ แต่ได้ EXP มหาศาล เจ้าแห่งลาวารออยู่ปลายทาง'};
-const WM_TYPE={forest:'Forest',desert:'Desert',snow:'Frostland',deepwood:'Deepwood',ruinvillage:'Ruins',lava:'Lava'};
+  lava:'ทุ่งลาวาเดือดพล่าน แม่น้ำลาวาและสะพานหิน มอนสเตอร์โหดกว่าแมพอื่น เกิดเป็นกองใหญ่ แต่ได้ EXP มหาศาล เจ้าแห่งลาวารออยู่ปลายทาง',
+  sky:'ทวีปลอยฟ้าเหนือมวลเมฆ โซนเอนด์เกมที่กว้างที่สุด (48x48) เต็มไปด้วยมอนสเตอร์ธาตุเมฆและสายฟ้า มังกรมหาสายฟ้าและจักรพรรดิทวีปลอยฟ้ารอผู้กล้าอยู่'};
+const WM_TYPE={forest:'Forest',desert:'Desert',snow:'Frostland',deepwood:'Deepwood',ruinvillage:'Ruins',lava:'Lava',sky:'Skyland'};
 function wmThumb(id){
   if(WM.thumbs[id])return WM.thumbs[id];
   const M=MAPS[id],c=document.createElement('canvas');c.width=c.height=32;const g=c.getContext('2d');
