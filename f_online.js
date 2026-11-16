@@ -8,7 +8,15 @@
 const SB={url:'https://sdsfpefkzxogzobesagm.supabase.co',key:'sb_publishable_RGOfZyF6tGj6fNY9ohih7g_f-86XgRX',table:'game_saves',legacy:false};
 const noSlotCol=e=>/slot/.test(JSON.stringify(e&&(e.raw||e.tx)||''))&&/column|schema|42703|PGRST204/i.test(JSON.stringify(e&&(e.raw||e.tx)||''));
 const SESS_KEY='mq_sess',OWNER_KEY='mq_owner';
-let SESS=null,GUEST=false,CLOUD={last:0,ok:null,pushing:false,at:0};
+let SESS=null,CLOUD={last:0,ok:null,pushing:false,at:0};
+// โหมดผู้มาเยือน (Guest): เล่นได้ทันทีไม่ต้องสมัคร • เซฟอยู่ในเครื่องนี้เท่านั้น (คีย์ขึ้นต้น guest_) • ไม่มีแชท/เห็นผู้เล่นอื่น/อันดับ
+// (ระบบออนไลน์ทุกอย่างเช็ก SESS อยู่แล้ว ผู้มาเยือน = SESS ว่าง) • สมัคร/ล็อกอินภายหลัง -> ตัวละคร Guest ย้ายเข้าช่องว่างของบัญชีให้อัตโนมัติ
+const GUEST_KEY='mq_guest',GUEST_NS='guest_';
+let GUEST=false;
+function setGuest(on){
+  GUEST=on;SAVE_NS=on?GUEST_NS:'';setSlot(SLOT);
+  try{if(on)localStorage.setItem(GUEST_KEY,'1');else localStorage.removeItem(GUEST_KEY)}catch(e){}
+}
 
 function loadSess(){try{SESS=JSON.parse(localStorage.getItem(SESS_KEY)||'null')}catch(e){SESS=null}}
 function saveSess(){try{if(SESS)localStorage.setItem(SESS_KEY,JSON.stringify(SESS));else localStorage.removeItem(SESS_KEY)}catch(e){}}
@@ -45,7 +53,7 @@ async function ensureFresh(){
 /* ---------- ซิงค์เซฟ ---------- */
 function cloudStatus(){
   const e=$('cloudSt');if(!e)return;
-  if(!SESS){e.textContent=GUEST?'👤 โหมดไม่สมัคร — เซฟเก็บในเครื่องนี้เท่านั้น':'';return}
+  if(!SESS){e.innerHTML=GUEST?'👤 ผู้มาเยือน (Guest)<br><span style="color:#ffe28a">เซฟอยู่ในเครื่องนี้เท่านั้น — สมัครสมาชิกเพื่อเก็บตัวละครบนคลาวด์และเล่นออนไลน์</span>':'';return}
   const t=CLOUD.at?new Date(CLOUD.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'-';
   e.innerHTML=`☁ ${emailToUser(SESS.user.email)}<br>${CLOUD.ok===false?'<span style="color:#ff9d9a">⚠ ซิงค์ไม่สำเร็จ'+(CLOUD.why?' ('+CLOUD.why+')':'')+' (จะลองใหม่)</span>':`ซิงค์ล่าสุด ${t}`}`;
 }
@@ -122,7 +130,12 @@ async function syncAfterLogin(){
       if(local&&owner===uid&&(local.t||0)>(cloud.t||0))push.push(s);   // เล่นออฟไลน์ไว้ใหม่กว่า -> ใช้ของเครื่อง แล้วอัปขึ้น
       else localStorage.setItem(k,JSON.stringify(cloud));
     }else if(local&&local.cls&&(!owner||owner===uid)&&!(SB.legacy&&s>1))push.push(s);   // ยังไม่มีบนคลาวด์: ผูกเซฟในเครื่องเข้าบัญชีนี้
-    else if(!(SB.legacy&&s>1))localStorage.removeItem(k);
+    else if(!(SB.legacy&&s>1)){
+      localStorage.removeItem(k);
+      // ช่องนี้ของบัญชียังว่าง + มีตัวละครที่เล่นแบบผู้มาเยือนไว้ในช่องเดียวกัน -> ย้ายเข้าบัญชี แล้วอัปขึ้นคลาวด์
+      const gk=GUEST_NS+k,g=localStorage.getItem(gk);let gs=null;try{gs=JSON.parse(g||'null')}catch(e){}
+      if(gs&&gs.cls){localStorage.setItem(k,g);localStorage.removeItem(gk);push.push(s);CLOUD.adopted=(CLOUD.adopted||0)+1}
+    }
   }
   localStorage.setItem(OWNER_KEY,uid);CLOUD.at=Date.now();CLOUD.ok=true;
   const cur=SLOT;for(const s of push){setSlot(s);await cloudPush(false)}setSlot(cur);
@@ -145,6 +158,10 @@ let AUTHNEXT=null,AUTHMODE='login';
 #authBox .go{padding:11px;font-size:16px;font-weight:bold;color:#fff;background:linear-gradient(#4a82f0,#1c47b4);border:2px solid #e0bf5a;border-radius:8px;box-shadow:inset 0 2px 0 #8db4ff,0 2px 0 #000;text-shadow:0 1px 0 #0a1a50}
 #authBox .go:disabled{opacity:.5}
 #authBox .sw{background:none;border:0;color:#9fc0ff;font-size:13px;text-decoration:underline;padding:4px}
+#authBox .or{display:flex;align-items:center;gap:8px;font-size:12px;color:#7f93c4}
+#authBox .or:before,#authBox .or:after{content:'';flex:1;height:1px;background:#2e528f}
+#authBox .guest{padding:10px;font-size:15px;font-weight:bold;color:#2a1a04;background:linear-gradient(#ffe28a,#e0a92e);border:2px solid #fff1b8;border-radius:8px;box-shadow:inset 0 2px 0 #fff6cf,0 2px 0 #000}
+#authBox .gnote{font-size:11.5px;color:#9fb0d8;text-align:center;line-height:1.5}
 #authErr{min-height:18px;font-size:13px;color:#ff9d9a;text-align:center}
 #authMsg{font-size:12px;color:#ffe28a;text-align:center;max-width:380px;line-height:1.5}`;
   document.head.appendChild(s);
@@ -156,7 +173,9 @@ let AUTHNEXT=null,AUTHMODE='login';
     <div id="authErr"></div>
     <button class="go" id="aGo">เข้าสู่ระบบ</button>
     <button class="sw" id="aSw">ยังไม่มีบัญชี? สมัครสมาชิก</button>
-    <button class="sw" id="aGuest" style="color:#9be58a;font-size:14px;padding:8px">► เล่นเลยไม่ต้องสมัคร (เซฟในเครื่อง)</button></div></div>`;
+    <div class="or">หรือ</div>
+    <button class="guest" id="aGuest">🎮 เล่นแบบผู้มาเยือน (Guest)</button>
+    <div class="gnote">ไม่ต้องสมัคร เล่นได้ทันที • เซฟเก็บในเครื่องนี้เท่านั้น • แชท/ปาร์ตี้/อันดับต้องสมัครก่อน<br>สมัครภายหลังได้ ตัวละครจะย้ายเข้าบัญชีให้</div></div></div>`;
   document.body.appendChild(d);
 })();
 function authMode(m){
@@ -178,15 +197,16 @@ async function authSubmit(){
       if(!j.access_token){   // เปิด Confirm email ไว้ -> ยังไม่มีเซสชัน
         err.style.color='#ffe28a';err.textContent='สมัครแล้ว แต่ระบบยังเปิดให้ยืนยันอีเมลอยู่ — ให้ผู้ดูแลปิด "Confirm email" ใน Supabase (Authentication → Providers → Email) แล้วลองเข้าสู่ระบบ';btn.disabled=false;authMode('login');return}
     }else j=await sb('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email,password:pw})},false);
-    SESS=sessFrom(j);saveSess();
+    SESS=sessFrom(j);saveSess();setGuest(false);
     err.textContent='กำลังโหลดตัวละคร...';
     await syncAfterLogin();
     $('authUI').style.display='none';btn.disabled=false;$('aPass').value='';
     const n=AUTHNEXT;AUTHNEXT=null;if(n)n();
+    if(CLOUD.adopted){toast(`☁ ย้ายตัวละครผู้มาเยือน ${CLOUD.adopted} ตัวเข้าบัญชีแล้ว`);CLOUD.adopted=0}
   }catch(e){err.style.color='#ff9d9a';err.textContent=e.msg||'เกิดข้อผิดพลาด ลองใหม่อีกครั้ง';btn.disabled=false}
 }
 $('aGo').onclick=authSubmit;$('aSw').onclick=()=>authMode(AUTHMODE==='login'?'signup':'login');
-$('aGuest').onclick=()=>{SESS=null;GUEST=1;try{localStorage.setItem('mq_guest','1')}catch(e){}$('authUI').style.display='none';const n=AUTHNEXT;AUTHNEXT=null;if(n)n()};
+$('aGuest').onclick=()=>{setGuest(true);$('authUI').style.display='none';const n=AUTHNEXT;AUTHNEXT=null;if(n)n()};
 $('aPass').addEventListener('keydown',e=>{if(e.key==='Enter')authSubmit()});
 $('aEmail').addEventListener('keydown',e=>{if(e.key==='Enter')$('aPass').focus()});
 
@@ -194,10 +214,11 @@ $('aEmail').addEventListener('keydown',e=>{if(e.key==='Enter')$('aPass').focus()
 const _buildStartOnline=buildStart;
 buildStart=function(){
   loadSess();
-  GUEST=false;try{GUEST=!SESS&&localStorage.getItem('mq_guest')==='1'}catch(e){}   // เคยกด "เล่นไม่ต้องสมัคร" = ข้ามหน้าล็อกอิน
-  const go=()=>{$('start').style.display='';_buildStartOnline();setTimeout(cloudStatus,50);if(window._paintOutBtn)_paintOutBtn()};
+  const go=()=>{$('start').style.display='';_buildStartOnline();setTimeout(cloudStatus,50)};
   const show=()=>{AUTHNEXT=go;authMode('login');$('authUI').style.display='flex';$('start').style.display='none';setTimeout(()=>$('aEmail').focus(),50)};
-  if(!SESS){GUEST?go():show();return}
+  if(!SESS){let g=false;try{g=localStorage.getItem(GUEST_KEY)==='1'}catch(e){}
+    if(g){setGuest(true);go();return}   // เคยเลือกผู้มาเยือนไว้ -> เข้าเกมเลย (เปลี่ยนเป็นล็อกอินได้ที่เมนู)
+    show();return}
   syncAfterLogin().then(go).catch(e=>{
     if(e&&e.net&&localStorage.getItem(OWNER_KEY)===SESS.user.id){CLOUD.ok=false;go();return}   // เน็ตหลุด: เล่นด้วยเซฟในเครื่องก่อน
     SESS=null;saveSess();show();
@@ -206,9 +227,10 @@ buildStart=function(){
 
 /* ---------- ออกจากระบบ / ลบตัวละคร ---------- */
 async function logout(){
-  if(GUEST||!SESS){   // โหมดไม่สมัคร: ออกแค่กลับหน้าเลือกตัวละคร ไม่ลบเซฟในเครื่อง
-    if(!confirm('กลับหน้าเลือกตัวละคร?\n(โหมดไม่สมัคร: ตัวละครยังเซฟอยู่ในเครื่องนี้)'))return;
-    NOSAVE=true;location.reload();return}
+  if(GUEST){   // ผู้มาเยือน: ไปหน้าล็อกอิน/สมัคร (เซฟ Guest อยู่ในเครื่องต่อ และจะย้ายเข้าบัญชีหลังล็อกอิน)
+    if(!confirm('ไปหน้าเข้าสู่ระบบ / สมัครสมาชิก?\n(ตัวละครผู้มาเยือนจะย้ายเข้าบัญชีให้ ถ้าช่องในบัญชียังว่าง)'))return;
+    try{if(P&&!NOSAVE)save(false)}catch(e){}
+    NOSAVE=true;clearInterval(saveTimer);setGuest(false);location.reload();return}
   if(!confirm('ออกจากระบบ?\n(เซฟล่าสุดจะถูกอัปขึ้นคลาวด์ก่อน)'))return;
   try{if(P&&SESS)await cloudPush(false)}catch(e){}
   NOSAVE=true;clearInterval(saveTimer);
@@ -233,10 +255,9 @@ deleteSlotData=async function(s){
 // ปุ่มออกจากระบบ + สถานะคลาวด์ในเมนู
 (function(){
   const mb=document.querySelectorAll('#menuPanel .mg')[3];if(!mb)return;
-  const row=mb.querySelector('.mb'),b=document.createElement('button');b.className='btn mi';b.id='bOut';b.innerHTML='<i>🚪</i><span>ออกจากระบบ</span><em>&nbsp;</em>';
-  const guestLogin=()=>{if(!confirm('ไปหน้าเข้าสู่ระบบ/สมัคร?\n(ตัวละครโหมดไม่สมัครจะยังเซฟอยู่ในเครื่อง แต่จะไม่ขึ้นคลาวด์จนกว่าจะเข้าบัญชีและเล่นช่องนั้น)'))return;try{localStorage.removeItem('mq_guest')}catch(e){}NOSAVE=true;location.reload()};
-  b.onclick=()=>{(typeof GUEST!=='undefined'&&GUEST)?guestLogin():logout()};row.appendChild(b);
-  window._paintOutBtn=()=>{if(typeof GUEST==='undefined')return;b.innerHTML=GUEST?'<i>\u2601\uFE0F</i><span>เข้าสู่ระบบบัญชี</span><em>&nbsp;</em>':'<i>\uD83D\uDEAA</i><span>ออกจากระบบระบบ</span><em>&nbsp;</em>'};
+  const row=mb.querySelector('.mb'),b=document.createElement('button');b.className='btn mi';b.id='bOut';b.innerHTML='<i>🚪</i><span>ออกจากระบบ</span><em>&nbsp;</em>';b.onclick=logout;row.appendChild(b);
+  // ผู้มาเยือน: ปุ่มเดียวกันกลายเป็น "สมัคร / เข้าสู่ระบบ"
+  setInterval(()=>{const s=b.querySelector('span'),i=b.querySelector('i'),t=GUEST?'สมัคร / เข้าสู่ระบบ':'ออกจากระบบ';if(s.textContent!==t){s.textContent=t;i.textContent=GUEST?'🔑':'🚪'}},1000);
   const st=document.createElement('div');st.id='cloudSt';st.className='small';st.style.cssText='margin-top:8px;padding-top:6px;border-top:1px solid #2e528f;color:#9fc0ff;line-height:1.5;word-break:break-all';
   document.getElementById('menuPanel').appendChild(st);
 })();

@@ -506,25 +506,12 @@ const ROSTER=[
   ['lv_shark','ฉลามหินลาวา','m2_c7',165,{lava:1,tint:'red'}],['lv_orc','ออร์คเหล็กหลอม','m2_c1',170,{lava:1,tint:'gold'}],['lv_wolf','หมาป่าถ่านเพลิง','m2_c2',173,{lava:1,tint:'red'}],
   ['lv_knight','อัศวินกระดูกไหม้','m2_c8',177,{lava:1,tint:'red'}],['lv_bird','อินทรีเถ้าถ่าน','m2_c6',181,{lava:1,tint:'gold'}],['lv_bat','แมลงเพลิงปีกดำ','m2_c0',185,{lava:1,tint:'red'}],
   ['lv_plant','ดอกไม้ไหม้กินคน','m2_c4',189,{lava:1,ranged:1,tint:'gold'}],['lv_hydra','ไฮดราลาวา','m2_c9',193,{lava:1,elite:1,tint:'red'}],['lv_golem2','โกเลมเจ้าไฟ','m2_c5',197,{lava:1,elite:1,big:1,tint:'gold'}],
-  ['lavaLord','เจ้าแห่งลาวา','m2_c5',200,{lava:1,boss:1,px:2,tint:'red'}],
-  // ----- ทวีปลอยฟ้า Lv 201-210 (แมพใหญ่พิเศษ 48x48 • มอนสเตอร์ธาตุเมฆ/สายฟ้า) -----
-  ['sky_wisp','วิญญาณเมฆา','cp_fwisp',201,{sky:1,ranged:1,tint:'blue'}],
-  ['sky_wolf','หมาป่าพายุเมฆ','m2_c2',202,{sky:1,tint:'blue'}],
-  ['sky_harp','นกอินทรีเมฆ','m2_c6',203,{sky:1,tint:'gold'}],
-  ['sky_gol','โกเลมคริสตัล','m2_c5',204,{sky:1,big:1,tint:'blue'}],
-  ['sky_knight','อัศวินแห่งทวีปลอย','m2_c8',205,{sky:1,tint:'blue'}],
-  ['sky_mage','จอมเวทหมอกเงิน','cp_hooded',206,{sky:1,ranged:1,tint:'violet'}],
-  ['sky_guardian','ผู้พิทักษ์เมฆ','m2_c1',207,{sky:1,elite:1,tint:'gold'}],
-  ['sky_dragon','มังกรวายุเมฆ','cp_dragon',208,{sky:1,elite:1,tint:'blue'}],
-  ['stormDragon','มังกรมหาสายฟ้า','cp_dragon',209,{sky:1,boss:1,px:2.2,tint:'blue'}],
-  ['skyLord','จักรพรรดิทวีปลอยฟ้า','m2_c9',210,{sky:1,boss:1,px:2,tint:'gold'}]
+  ['lavaLord','เจ้าแห่งลาวา','m2_c5',200,{lava:1,boss:1,px:2,tint:'red'}]
 ];
 // แมพ Lv 101-200 โหดขึ้น: HP x4 / ATK x1.8 (ใช้ตอนสร้างตารางมอนสเตอร์จาก ROSTER เท่านั้น)
 const TOUGH_HI=(lv,s)=>{if(lv>100){s.hp=Math.round(s.hp*4);s.atk=Math.round(s.atk*1.8)}return s};
 // แมพลาวา: HP x1.6 ATK x1.3 DEF x1.25 EXP x2.5 Zeny x2 (ซ้อนบน TOUGH_HI)
 const TOUGH_LAVA=(o,s)=>{if(o.lava){s.hp=Math.round(s.hp*1.6);s.atk=Math.round(s.atk*1.3);s.def=Math.round(s.def*1.25);s.exp=Math.round(s.exp*2.5);s.zeny=s.zeny.map(v=>Math.round(v*2))}return s};
-// ทวีปลอยฟ้า: HP x2 ATK x1.4 EXP x3 Zeny x2.5 (โซนเอนด์เกม แมพใหญ่กว่าปกติ 1.5 เท่า)
-const TOUGH_SKY=(o,s)=>{if(o.sky){s.hp=Math.round(s.hp*2);s.atk=Math.round(s.atk*1.4);s.exp=Math.round(s.exp*3);s.zeny=s.zeny.map(v=>Math.round(v*2.5))}return s};
 // ภาพมอนสเตอร์ชุดใหม่ (mon2_sprites.js): Lv1-50 / 51-100 / 101-150 ชุดละ 10 แบบ — ใช้ซ้ำโดยเปลี่ยนสีตามลำดับเลเวล (Lv151+ ใช้ภาพเดิม)
 (function(){
   if(!window.MON2)return;
@@ -542,7 +529,7 @@ const TOUGH_SKY=(o,s)=>{if(o.sky){s.hp=Math.round(s.hp*2);s.atk=Math.round(s.atk
 })();
 const MOBS={};
 const MOB_SCALE=1.5;   // ขยายมอนสเตอร์ทุกตัว (บอส/ผู้นำ/บอสโลก คูณต่อจากค่านี้) — ความสูงและจุดคลิกคำนวณตามอัตโนมัติ
-for(const [k,name,sprite,lv,o={}] of ROSTER)MOBS[k]=Object.assign({name,sprite,px:(o.px||1)*MOB_SCALE,ranged:!!o.ranged,elite:!!o.elite,boss:!!o.boss,tint:o.tint?TINTS[o.tint]:null},TOUGH_SKY(o,TOUGH_LAVA(o,TOUGH_HI(lv,mobStats(lv,o)))));
+for(const [k,name,sprite,lv,o={}] of ROSTER)MOBS[k]=Object.assign({name,sprite,px:(o.px||1)*MOB_SCALE,ranged:!!o.ranged,elite:!!o.elite,boss:!!o.boss,tint:o.tint?TINTS[o.tint]:null},TOUGH_LAVA(o,TOUGH_HI(lv,mobStats(lv,o))));
 
 /* ============ sprites ============ */
 const SHEETS={};
@@ -611,13 +598,18 @@ function resize(){
   // LM = ความละเอียดของบัฟเฟอร์วาดเทียบพิกเซลอาร์ต (วาดด้วยหน่วยพิกเซลอาร์ตเหมือนเดิม แต่ละเอียดขึ้น LM เท่า)
   // พิกเซลอาร์ตยังคมเท่าเดิม (ขยายแบบ nearest) ส่วนสไปรต์ HD จะวาดที่ความละเอียดใกล้หน้าจอ ไม่เบลอเหมือนย่อลงเหลือไม่กี่พิกเซลแล้วขยายกลับ
   LM=clamp(Math.round(PS),1,3);
-  LW=Math.ceil(cv.width/PS);LH=Math.ceil(cv.height/PS);lo.width=LW*LM;lo.height=LH*LM;
+  // +1 พิกเซลอาร์ตต่อด้าน: เผื่อขอบไว้ให้กล้องเลื่อนละเอียดระดับพิกเซลจอได้ (ดู OX/OY ใน render)
+  LW=Math.ceil(cv.width/PS)+1;LH=Math.ceil(cv.height/PS)+1;lo.width=LW*LM;lo.height=LH*LM;
   ZOOM=PS/DPR/A; // พิกเซล CSS ต่อหน่วยเกม
 }
 addEventListener('resize',resize);resize();
 let CX=0,CY=0; // มุมซ้ายบนของกล้อง เป็นพิกเซลอาร์ต (จำนวนเต็ม)
+let OX=0,OY=0; // เศษของกล้องที่ปัดทิ้งไป เป็นพิกเซลจอ (0..PS) — ใช้เลื่อนภาพตอนขยายขึ้นจอ ให้กล้องลื่นโดยพิกเซลอาร์ตยังคม
 const L=v=>Math.round(v/A);                 // หน่วยเกม -> พิกเซลอาร์ต
-const sxL=x=>L(x)-CX, syL=y=>L(y)-CY;       // ตำแหน่งบนแคนวาสต่ำ
+// ตำแหน่งบนแคนวาสต่ำ: ปัดละเอียด 1/LM พิกเซลอาร์ต (= 1 พิกเซลจริงของบัฟเฟอร์ lo ที่ละเอียด LM เท่า) ภาพจึงยังคม
+// แต่ตัวละคร/มอนสเตอร์ขยับทีละ ~1 พิกเซลจอ ไม่กระโดดทีละพิกเซลอาร์ต (LM=1 จะเท่ากับของเดิม)
+const artFine=v=>Math.round(v/A*LM)/LM;   // (อย่าใช้ชื่อ LF — f_life.js ประกาศ const LF ไว้แล้ว ชื่อซ้ำจะทำให้ไฟล์นั้นพังทั้งไฟล์)
+const sxL=x=>artFine(x)-CX, syL=y=>artFine(y)-CY;
 function px(x,y,w,h,col){lx.fillStyle=col;lx.fillRect(x,y,w,h)}
 // วงรีพิกเซล (เส้นขอบ / ทึบ)
 function pxEllipse(cx,cy,rx,ry,col,fill){
@@ -883,71 +875,17 @@ const MAPS={
     pal:{0:['#2a2224','#34292b','#42353a'],1:['#5a4636','#6e5642','#86684e'],2:['#2a2224','#34292b','#42353a'],3:['#d8400a','#f0701a','#ffb02a'],
          4:['#15101a','#241a26','#3a2c3c'],5:['#4a3a34','#6a5648','#8a7260'],6:['#6e6258','#84786c','#9a8e80'],7:['#14101a','#1c1620','#241e2a'],8:['#3a3232','#524848','#6a5e5e'],9:['#4a3a34','#5a4a44','#6a5a54']},
     deco:['rock','bones','dtree','lcrys2','lcrys3','lcrys4','dcrys1','dcrys2','lflame'],trees:null,mcol:'#3a2a30',
-    },
-  sky:{name:'ทวีปลอยฟ้า',ic:'☁️',lv:'201-210',skyMap:1,gn:48,
-    grid:[
-'################################################',
-'#.........,...,.,.............,.......,,.,.....#',
-'#.,,....,,.........,.,..........,,.,,......,,..#',
-'#......,...,..,,.,TTTTT......,........,,.,....,#',
-'#.,,,........,...TTTTTTT.....,...,.........,,,.#',
-'#,.,,...,,,..,.,,TTTTTTT,......~~~~~~~.,,.....,#',
-'#.,,..~~~~~~~~~.,TTTTTTT..,,.~~~~~~~~~~~.......#',
-'#,..,~~~~~~~~~~~.TTTTTTT,...,~~~~~~~~~~~..,..,.#',
-'#..,~~~~~~~~~~~~~TTTTTTT.,o,.~~~~~~~~~~~.,iiiii#',
-'#...~~~~~~~~~~~~~.TTTTT..,...~~~~~~~~~~~..iiiii#',
-'#...~~~~~~~~~~~~~,r,.,..,..,.~~~~~~~~~~~,,iiiii#',
-'#..,~~~~~~~~~~~~~......iii.,.,,~~~~~~~.,..iiiii#',
-'#..,~~~~~~~~~~~~~,.....iii...,,..,.,,...,.iiiii#',
-'#...,~~~~~~~~~~~.......iii...,.,,.....,......,,#',
-'#.iiii~~~~~~~~~.....,.....,,,....,.r,.,,,,,....#',
-'#.iiiii....,....,.......,.....,,..,....,.......#',
-'#.iiiii....,,.,....,....,..,TTTTT...,.....,,...#',
-'#,iiiii........,.,,.,..,....TTTTT,,...,.....,,.#',
-'#.iiiii.,..,,.....,...r...,.TTTTT...,...,,...,.#',
-'#....,..,...TTTTT,,,..,,.,..TTTTT....,.,,......#',
-'#....,,.,.,TTTTTTT.,~~~~=~~~~TTTT..,..TTTTT.,..#',
-'#..,,...,..TTTTTTT~~~~~~~~~~~~~,.,....TTTTT....#',
-'#.,....,...TTTTTT~~~~~~~~~~~~~~~.,.,.,TTTTT....#',
-'#......,..,TTTTT~~~~~~~~~~~~~~~~~.,...TTTTT,...#',
-'#.......o,,TTTTT~~~~~~~~~~~~r~~~~.....TTTTT....#',
-'#.,...,..,..TTTT~~~~~~~~~~~~~~~~~....,.,,..,.,,#',
-'#.,,,,..,.,,....~~~~~~~~~~~~~~~~~...,,.,....,.,#',
-'#.,.,...,.....,.~~~~~~~~~~~~~~~~~..,......,.,..#',
-'#.,.,~~~~~~~...o~~~~~~~~~~~~~~~~~.,..,...,.,..,#',
-'#,,,~~~~~~~~~...~~~~~~~~~~~~~~~~~.,,..,.....,..#',
-'#,.~~~r~~~~~~~,..~~~~~~~~~~~~~~~.oiiiii.,.,,r..#',
-'#..~~~~~~~=~~~.,..~~~~~~~~~~~~~,.,iiiii.......,#',
-'#..~~~~~~~~~~~.,....~~~~~~~~~,.,..iiiii..,.....#',
-'#.,~~~~~~~~~~~...,,....,..,...,.,.iiii,~~~~....#',
-'#..~~~~~~~~~~~......o....,...,....iii.,~~~~~..,#',
-'#...~~~~~~~~~.,,,,,,..,.....,.....,.~,,,,,,,,..#',
-'#.,,.~~~~~~~...,,,,..,.,...,........~,,,,,,,,..#',
-'#..,..,....iii.,..,....,....,.......~,,HHHHHHHH#',
-'#.......,..iii..TTTTT...............~,,HHHHHHHH#',
-'#..,,..,...iii.,TTTTT.,......,.,,,,.~,,HHHHHHHH#',
-'#....,....,..,..TTTTT.,..,.,TTTTT..,~,,HHHHHHHH#',
-'#,..,,..,.,..,..TTTTT.,,.,,.TTTTT...~,,HHHHHHHH#',
-'#.....,...,...,,TTTTT...,...TTTTT,.,.,,HHHHHHHH#',
-'#...........,......,,...,...TTTTT,..,.,HHHHHHHH#',
-'#.,..,....,,...,r..,,,...,..TTTTT.,..,oHHHHHHHH#',
-'#.,,,.,..,....,,.,,.,...,..,....,.,...,HHHHHHHH#',
-'#...,..,..,..,..,..,...,......,....,...HHHHHHHH#',
-'################################################',],
-    pal:{0:['#cfe4f4','#dceef8','#eaf6fc'],1:['#b8d0e8','#c8dcf0','#d8eaf8'],2:['#7a9ac0','#8aa8cc','#9ab8d8'],3:['#4a90d8','#6aaae8','#8ac4f4'],
-         4:['#3a4a70','#4a5a88','#5a6c9c'],5:['#8a7a5a','#a09068','#b0a078'],6:['#c8d4e4','#d4e0ec','#e0eaf4'],7:['#2a3a5a','#3a4a6a','#4a5a7a'],8:['#8a94ac','#9aa4bc','#aab4cc'],9:['#b8e4ff','#c8ecff','#d8f4ff']},
-    deco:['snowrock','crystal','flower'],trees:'tree',mcol:'#6a7a9c',
     }
 };
-const MAP_ORDER=['forest','desert','snow','deepwood','ruinvillage','lava','sky'];
+const MAP_ORDER=['forest','desert','snow','deepwood','ruinvillage','lava'];
 // มอนสเตอร์ของแต่ละแมพ = ทุกตัวใน ROSTER ที่เลเวลอยู่ในช่วงของแมพ  spawns: [key, จำนวนกลุ่ม, ขนาดกลุ่ม]
-for(const id in MAPS){const M=MAPS[id],[a,b]=M.lv.split('-').map(Number),o=r=>r[4]||{},zone=r=>o(r).lava?'lava':o(r).sky?'sky':'',zid=M.lavaMap?'lava':M.skyMap?'sky':'',inR=r=>r[3]>=a&&r[3]<=b&&zone(r)===zid;M.lvr=[a,b];
-  M.spawns=ROSTER.filter(r=>inR(r)&&!o(r).boss).map(r=>(M.lavaMap||M.skyMap)?[r[0],o(r).elite?1:2,o(r).elite?[3,4]:[10,12]]:[r[0],o(r).elite?1:2,o(r).elite?3:o(r).big?4:0]);
+for(const id in MAPS){const M=MAPS[id],[a,b]=M.lv.split('-').map(Number),o=r=>r[4]||{},inR=r=>r[3]>=a&&r[3]<=b&&!!o(r).lava===!!M.lavaMap;M.lvr=[a,b];
+  M.spawns=ROSTER.filter(r=>inR(r)&&!o(r).boss).map(r=>M.lavaMap?[r[0],o(r).elite?1:2,o(r).elite?[3,4]:[10,12]]:[r[0],o(r).elite?1:2,o(r).elite?3:o(r).big?4:0]);
   M.boss=ROSTER.filter(r=>inR(r)&&o(r).boss).map(r=>r[0])}
 const TT={'.':0,',':1,'T':2,'~':3,'#':4,'=':5,'H':6,'o':7,'r':8,'i':9};
 const BLOCK=[0,0,1,1,1,0,0,0,1,0];   // เดินไม่ได้: ป่าทึบ น้ำ หน้าผา/กำแพง ซากหิน  (หลุมสีดำเดินผ่านได้)
-const WORLD={w:CELL*GN,h:CELL*GN};   // ขนาดโลกจริงถูกปรับตามแมพใน buildMap (แมพใหญ่ = M.gn ช่อง)
-let GW=Math.round(WORLD.w/A),GH=Math.round(WORLD.h/A);const CP=CELL/A;   // ขนาดแผนที่เป็นพิกเซลอาร์ต, พิกเซลต่อช่อง
+const WORLD={w:CELL*GN,h:CELL*GN};
+const GW=Math.round(WORLD.w/A),GH=Math.round(WORLD.h/A),CP=CELL/A;   // ขนาดแผนที่เป็นพิกเซลอาร์ต, พิกเซลต่อช่อง
 let MAP=null,MAPID='forest',TER=null,TOWN=null,groundCv,ART={},props=[],fires=[],NODE=null;
 const MAP_CACHE={};
 const BAYER=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5].map(v=>v/16);
@@ -973,7 +911,7 @@ function tryMove(e,dx,dy){
 }
 function los(a,b){const d=Math.hypot(b.x-a.x,b.y-a.y),n=Math.ceil(d/6);for(let i=1;i<=n;i++){const t=i/n;if(!walkable(a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t))return false}return true}
 // A* บนตาราง 48 หน่วย (8 ทิศ ไม่ตัดมุม) แล้วตัดจุดที่มองเห็นกันได้ออกให้ทางตรงขึ้น
-const NS=48;let NW=Math.ceil(WORLD.w/NS),NH=Math.ceil(WORLD.h/NS);   // จำนวนโหนด A* คำนวณใหม่ตามขนาดแมพ
+const NS=48,NW=Math.ceil(WORLD.w/NS),NH=Math.ceil(WORLD.h/NS);
 let REACH=null,EDGE=null; // REACH = จุดที่เดินไปถึงได้จากเมือง, EDGE = เดินจากจุดหนึ่งไปจุดข้างเคียงได้จริงไหม (ไม่มีกำแพงบางๆ คั่น)
 const D8=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 const nodeC=i=>({x:(i%NW)*NS+NS/2,y:(i/NW|0)*NS+NS/2});
@@ -1126,19 +1064,17 @@ function makeArt(){
 }
 // สร้างแผนที่จากผัง: ชนิดพื้นทุกพิกเซล (TER) + ภาพพื้น + ของประดับ (เก็บแคชไว้ใช้ซ้ำ)
 function buildMap(id){
-  const M=MAPS[id],gn=M.gn||32;   // ขนาดแมพต่อแมพ (แมพปกติ 32, ทวีปลอยฟ้า 48)
-  WORLD.w=CELL*gn;WORLD.h=CELL*gn;GW=Math.round(WORLD.w/A);GH=Math.round(WORLD.h/A);NW=Math.ceil(WORLD.w/NS);NH=Math.ceil(WORLD.h/NS);
   if(MAP_CACHE[id])return MAP_CACHE[id];
-  const GA=M.grid.map(r=>[...(r+'#'.repeat(gn)).slice(0,gn)]);
+  const M=MAPS[id],GA=M.grid.map(r=>[...(r+'#'.repeat(GN)).slice(0,GN)]);
   // สะพานต้องข้ามน้ำได้ตลอดความกว้าง: ต่อสะพานไปทางแกนที่สั้นที่สุดจนถึงฝั่งทั้งสองข้าง
   const isW=(x,y)=>GA[y]&&GA[y][x]==='~',land=(x,y)=>GA[y]&&GA[y][x]&&!BLOCK[TT[GA[y][x]]];
-  for(let y=0;y<gn;y++)for(let x=0;x<gn;x++)if(GA[y][x]==='='){
+  for(let y=0;y<GN;y++)for(let x=0;x<GN;x++)if(GA[y][x]==='='){
     let best=null;
     for(const [dx,dy] of [[1,0],[0,1]]){let a=1,b=1;while(isW(x-dx*a,y-dy*a))a++;while(isW(x+dx*b,y+dy*b))b++;
       if(land(x-dx*a,y-dy*a)&&land(x+dx*b,y+dy*b)&&(!best||a+b<best.n))best={dx,dy,a,b,n:a+b}}
     if(best){for(let k=-best.a+1;k<best.b;k++)GA[y+best.dy*k][x+best.dx*k]='='}
   }
-  const G=GA.map(r=>r.join('')),gc=(cx,cy)=>cy<0||cy>=gn||cx<0||cx>=gn?'#':G[cy][cx];
+  const G=GA.map(r=>r.join('')),gc=(cx,cy)=>cy<0||cy>=GN||cx<0||cx>=GN?'#':G[cy][cx];
   const ter=new Uint8Array(GW*GH),R=seeded(id.length*97+13);
   // 1) ชนิดพื้น: เขย่าตำแหน่งด้วย noise ให้ขอบเป็นธรรมชาติ (สะพาน/เมืองคงขอบตรง)
   for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){
@@ -1188,12 +1124,12 @@ function buildMap(id){
     blobs.sort((a,b)=>a[1]-b[1]);for(const [x,y,r] of blobs){pxCircle(g,x,y+1,r+1,'#14300f');pxCircle(g,x,y,r,'#2f6a2a');pxCircle(g,x-1,y-1,Math.max(1,r-2),'#43853a');g.fillStyle='#6aaa52';g.fillRect(x-2,y-r+1,2,1)}}
   // 4) ของประดับ + ต้นไม้ตามขอบป่า
   const pr=[],fr=[],cellOK=(cx,cy)=>!BLOCK[TT[gc(cx,cy)]];
-  for(let cy=0;cy<gn;cy++)for(let cx=0;cx<gn;cx++){
+  for(let cy=0;cy<GN;cy++)for(let cx=0;cx<GN;cx++){
     const ch=gc(cx,cy);
     if(ch==='T'&&M.trees&&(cellOK(cx+1,cy)||cellOK(cx-1,cy)||cellOK(cx,cy+1)||cellOK(cx,cy-1)))
       for(let k=0;k<8;k++){const x=(cx+R())*CP|0,y=(cy+R())*CP|0;if(T(x,y)!==2)continue;if([[0,12],[12,0],[-12,0],[0,-12]].some(([a,b])=>!BLOCK[T(x+a,y+b)]))pr.push({k:R()<.6?['tree','tree2','tree3'][R()*3|0]:(R()<.5?'pine':'pine2'),x:x*A,y:y*A})}
     if(ch==='#'&&M.mtn!==false&&ART['mtnS_'+id]&&((cx+cy)&1)===0&&R()<.7){   // ภูเขา: ตั้งบนผืนหน้าผา/ขอบแผนที่ (ยอดโผล่เหนือผนัง)
-      const hl=gc(cx-1,cy)==='#',hr=gc(cx+1,cy)==='#',sideCol=cx===0||cx===gn-1;
+      const hl=gc(cx-1,cy)==='#',hr=gc(cx+1,cy)==='#',sideCol=cx===0||cx===GN-1;
       let up=cy===0?3:1;if(cy>0)while(up<4&&gc(cx,cy-up)==='#')up++;
       const sz=hl&&hr?(up>=4?'L':up>=3?'M':'S'):sideCol?'S':null;
       if(sz)pr.push({k:'mtn'+sz+'_'+id,x:(cx+.5)*CELL,y:(cy+.95)*CELL,mtn:1})}
@@ -1201,7 +1137,7 @@ function buildMap(id){
     if(ch==='.'||ch===','||ch==='i')for(let q=0;q<2;q++)if(R()<.45){const x=(cx+R())*CELL,y=(cy+R())*CELL;if(!isBlockT(ter,x,y))pr.push({k:M.deco[R()*M.deco.length|0],x,y,deco:1})}
   }
   // 5) เมือง: กรอบ, ร้านค้า, ประตูวาร์ป, กองไฟ, ถัง
-  let x0=1e9,y0=1e9,x1=0,y1=0;for(let cy=0;cy<gn;cy++)for(let cx=0;cx<gn;cx++)if(gc(cx,cy)==='H'){x0=Math.min(x0,cx*CELL);y0=Math.min(y0,cy*CELL);x1=Math.max(x1,(cx+1)*CELL);y1=Math.max(y1,(cy+1)*CELL)}
+  let x0=1e9,y0=1e9,x1=0,y1=0;for(let cy=0;cy<GN;cy++)for(let cx=0;cx<GN;cx++)if(gc(cx,cy)==='H'){x0=Math.min(x0,cx*CELL);y0=Math.min(y0,cy*CELL);x1=Math.max(x1,(cx+1)*CELL);y1=Math.max(y1,(cy+1)*CELL)}
   const town={x0,y0,x1,y1,cx:(x0+x1)/2,cy:(y0+y1)/2};
   const blockBase=(wx,wy,wArt)=>{const bx=Math.round(wx/A),by=Math.round(wy/A),hw=Math.round(wArt/2);for(let yy=by-5;yy<=by;yy++)for(let xx=bx-hw;xx<=bx+hw;xx++)if(xx>=0&&yy>=0&&xx<GW&&yy<GH)ter[yy*GW+xx]=8};
   // ปราสาทใหญ่กลางเมืองด้านบน (ชนได้ตรงฐาน) • ร้าน/ป้ายเควสต์/ช่างตีเหล็กอยู่ด้านล่างปราสาท
@@ -1256,7 +1192,7 @@ function enterMap(id,spawnAt){
   }
 }
 // ประตูวาร์ป: วงหมุนพิกเซล สีตามแผนที่ปลายทาง
-const PORTAL_COL={forest:['#3fbf5f','#9ff0b0'],desert:['#e0a040','#ffe0a0'],snow:['#4ab0f0','#c0f0ff'],deepwood:['#9a5af0','#d8b8ff'],ruinvillage:['#f0505a','#ffb0b4'],lava:['#ff7a1a','#ffd27a'],sky:['#a8d8ff','#ffffff']};
+const PORTAL_COL={forest:['#3fbf5f','#9ff0b0'],desert:['#e0a040','#ffe0a0'],snow:['#4ab0f0','#c0f0ff'],deepwood:['#9a5af0','#d8b8ff'],ruinvillage:['#f0505a','#ffb0b4'],lava:['#ff7a1a','#ffd27a']};
 function drawPortal(p){
   const x=sxL(p.x),y=syL(p.y),[c1,c2]=PORTAL_COL[p.to];
   pxEllipse(x,y,15,5,'rgba(0,0,0,.3)',true);
@@ -1314,10 +1250,10 @@ const moveSpd=()=>Math.min(320,150+(P.lv-1)*5+(P.stats.agi+SBN())*1.5+P.gs.spd)*
 
 // เกิดมอนสเตอร์ตามระยะห่างจากเมือง (ช่อง): ใกล้เมือง = ตัวอ่อน, ไกล = ตัวแรง  — เลือกเฉพาะช่องที่เดินไปถึงได้จากเมือง
 function reachableCells(){
-  const G=MAP_CACHE[MAPID].G,gn=G.length,ok=(x,y)=>x>=0&&y>=0&&x<gn&&y<gn&&!BLOCK[TT[G[y][x]]]&&walkable((x+.5)*CELL,(y+.5)*CELL);
-  const sx=Math.floor(TOWN.cx/CELL),sy=Math.floor(TOWN.cy/CELL),dist_=new Int16Array(gn*gn).fill(-1),q=[[sx,sy]];dist_[sy*gn+sx]=0;
-  while(q.length){const [x,y]=q.shift();for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const X=x+dx,Y=y+dy;if(ok(X,Y)&&dist_[Y*gn+X]<0){dist_[Y*gn+X]=dist_[y*gn+x]+1;q.push([X,Y])}}}
-  const out=[];for(let i=0;i<gn*gn;i++)if(dist_[i]>0&&G[i/gn|0][i%gn]!=='H')out.push({cx:i%gn,cy:i/gn|0,d:dist_[i]});return out;
+  const G=MAP_CACHE[MAPID].G,ok=(x,y)=>x>=0&&y>=0&&x<GN&&y<GN&&!BLOCK[TT[G[y][x]]]&&walkable((x+.5)*CELL,(y+.5)*CELL);
+  const sx=Math.floor(TOWN.cx/CELL),sy=Math.floor(TOWN.cy/CELL),dist_=new Int16Array(GN*GN).fill(-1),q=[[sx,sy]];dist_[sy*GN+sx]=0;
+  while(q.length){const [x,y]=q.shift();for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const X=x+dx,Y=y+dy;if(ok(X,Y)&&dist_[Y*GN+X]<0){dist_[Y*GN+X]=dist_[y*GN+x]+1;q.push([X,Y])}}}
+  const out=[];for(let i=0;i<GN*GN;i++)if(dist_[i]>0&&G[i/GN|0][i%GN]!=='H')out.push({cx:i%GN,cy:i/GN|0,d:dist_[i]});return out;
 }
 // มอนสเตอร์อยู่เป็นกลุ่ม (กลุ่มละ 5-7 ตัว) กระจายทั่วแผนที่: เลือกจุดกลางกลุ่มที่ห่างจากกลุ่มอื่นมากที่สุด
 function spawnMobs(){
@@ -1389,7 +1325,7 @@ function killMob(m){
   m.dead=true;m.rt=m.d.respawn||9;m.deadT=0;P.kills++;
   oneShot(m.actor,'death',.9);m.actor.busy=Infinity;
   const cm=comboKill(m),e=Math.round(m.d.exp*cm*bm().exp);P.exp+=e;
-  const z=Math.round(ri(m.d.zeny[0],m.d.zeny[1])*bm().zeny);P.zeny+=z;sfx(m.d.boss?'bosskill':m.d.elite?'boss':'kill');
+  const z=Math.round(ri(m.d.zeny[0],m.d.zeny[1])*bm().zeny);P.zeny+=z;sfx(m.d.boss?'boss':'kill');
   say(`ปราบ ${m.d.name}  +${e} EXP  +${z} Zeny`,'#ffe28a');
   float(m.x,m.y-m.d.h-26,`+${e} EXP`,'#9be58a');
   ring(m.x,m.y,50,'#ffffff',.5);
@@ -1916,9 +1852,12 @@ function pxSlash(cx,cy,R,a0,a1,col,alpha){
   lx.globalAlpha=1;
 }
 function render(){
-  // กล้อง (ปัดเป็นพิกเซลอาร์ตทั้งหมด ภาพจะไม่สั่น/เบลอ)
-  const sk=SHAKE_ON?shake:0,sh=sk>0?Math.round((Math.random()-.5)*sk):0,bob=SHAKE_ON&&walkSpd>25?Math.round(Math.sin(time*16)):0;   // จอสั่นตอนสกิล/เดิน (ปิดได้ที่ปุ่ม 📳)
-  CX=Math.round(cam.x/A)+sh;CY=Math.round(cam.y/A)+(sk>0?Math.round((Math.random()-.5)*sk):0)+bob;
+  // กล้อง: ฉากวาดที่ตำแหน่งพิกเซลอาร์ตจำนวนเต็ม (CX,CY) ภาพจึงไม่เบลอ ส่วนเศษที่เหลือ (OX,OY) เอาไปเลื่อนตอนขยายขึ้นจอ
+  // กล้องจึงเลื่อนทีละพิกเซลจอ ไม่กระโดดทีละ PS พิกเซลเหมือนเดิม
+  const sk=SHAKE_ON?shake:0,sh=sk>0?Math.round((Math.random()-.5)*sk):0,bob=SHAKE_ON&&walkSpd>25?Math.sin(time*16)*.8:0;   // จอสั่นตอนสกิล/เดิน (ปิดได้ที่ปุ่ม 📳)
+  const fcx=cam.x/A+sh,fcy=cam.y/A+(sk>0?Math.round((Math.random()-.5)*sk):0)+bob;
+  // ปัดตำแหน่งกล้องรวมเป็นพิกเซลจอจำนวนเต็มก่อน แล้วค่อยหักส่วนที่เป็นพิกเซลอาร์ตออก (PS เป็นทศนิยมได้ เช่น 2.75 — ปัดเฉพาะเศษจะเลื่อนไม่สม่ำเสมอ)
+  CX=Math.floor(fcx);CY=Math.floor(fcy);OX=clamp(Math.round(fcx*PS)-CX*PS,0,PS);OY=clamp(Math.round(fcy*PS)-CY*PS,0,PS);
   lx.setTransform(LM,0,0,LM,0,0);lx.imageSmoothingEnabled=false;
   lx.fillStyle='#0d1016';lx.fillRect(0,0,LW,LH);
   lx.drawImage(groundCv,CX,CY,LW,LH,0,0,LW,LH);
@@ -1987,9 +1926,9 @@ function render(){
   atmos();   // กลางวัน/กลางคืน + สภาพอากาศ
   // ขยายขึ้นจอแบบไม่เบลอ
   ctx.setTransform(1,0,0,1,0,0);ctx.imageSmoothingEnabled=false;
-  ctx.drawImage(lo,0,0,LW*PS,LH*PS);
-  // ชื่อภาษาไทย (ความละเอียดจอ) — ผู้เล่น บอส หัวหน้า ร้านค้า
-  const sc=PS/DPR,TX=(x,y,t,col,size)=>{ctx.font=`bold ${size*DPR}px Tahoma`;ctx.textAlign='center';ctx.lineJoin='round';ctx.lineWidth=3*DPR;ctx.strokeStyle='#120c08';ctx.strokeText(t,x*DPR,y*DPR);ctx.fillStyle=col;ctx.fillText(t,x*DPR,y*DPR)};
+  ctx.drawImage(lo,-OX,-OY,LW*PS,LH*PS);
+  // ชื่อภาษาไทย (ความละเอียดจอ) — ผู้เล่น บอส หัวหน้า ร้านค้า (เลื่อนตามเศษกล้อง OX/OY ให้ตรงกับฉาก)
+  const sc=PS/DPR,TX=(x,y,t,col,size)=>{ctx.font=`bold ${size*DPR}px Tahoma`;ctx.textAlign='center';ctx.lineJoin='round';ctx.lineWidth=3*DPR;ctx.strokeStyle='#120c08';ctx.strokeText(t,x*DPR-OX,y*DPR-OY);ctx.fillStyle=col;ctx.fillText(t,x*DPR-OX,y*DPR-OY)};
   {const wp=P.eq&&P.eq.weapon&&P.eq.weapon.plus||0;TX(sxL(P.x)*sc,(syL(P.y)+14)*sc,`${pName()} Lv${P.lv}${wp?'  ⚔+'+wp:''}`,wp?PG_COL[plusTier(P.eq.weapon)]:'#ffffff',12)}
   // ป้ายมอนสเตอร์: เลเวลตัวเล็ก + ตัวเลขเลือด (HP/สูงสุด) เหนือหลอดเลือด • บอส/หัวหน้าแสดงชื่อด้วย
   for(const m of mobs){if(m.dead)continue;const x=sxL(m.x),y=syL(m.y)-Math.round(m.d.h/A);if(x<-50||x>LW+50||y<-20||y>LH+30)continue;
@@ -2469,7 +2408,7 @@ function keyName(e){
   if(c==='Escape')return 'escape';
   return (e.key||'').toLowerCase();
 }
-function worldPos(e){return{x:(e.clientX*DPR/PS+CX)*A,y:(e.clientY*DPR/PS+CY)*A}}
+function worldPos(e){return{x:((e.clientX*DPR+OX)/PS+CX)*A,y:((e.clientY*DPR+OY)/PS+CY)*A}}
 cv.addEventListener('pointerdown',e=>{
   if(!P||P.hp<=0||P.dying>0||!e.isPrimary||pinch)return;e.preventDefault();   // นิ้วที่สอง = ซูม ไม่ใช่สั่งเดิน
   const w=worldPos(e);let best=null,bd=1e9;
@@ -2782,7 +2721,9 @@ addEventListener('pagehide',()=>{if(P)save(false)});
 /* ============ save ============ */
 // 1 บัญชี = ตัวละครได้ 2 ช่อง • ช่อง 1 ใช้คีย์เดิม (เซฟเก่ากลายเป็นช่อง 1 อัตโนมัติ) • KEY = คีย์ของช่องที่กำลังเล่น
 const KEY0='meadowquest_save_v1',CHAR_SLOTS=4;
-const slotKey=s=>s===1?KEY0:KEY0+'_'+s;
+// SAVE_NS = คำนำหน้าคีย์เซฟ: '' = บัญชีออนไลน์ (เดิม) • 'guest_' = โหมดผู้มาเยือน (f_online.js) แยกเซฟกันไม่ปนกับบัญชีที่เคยล็อกอินในเครื่องนี้
+let SAVE_NS='';
+const slotKey=s=>SAVE_NS+(s===1?KEY0:KEY0+'_'+s);
 let SLOT=1,KEY=KEY0;
 function setSlot(s){SLOT=s;KEY=slotKey(s)}
 function loadSlot(s){try{const o=JSON.parse(localStorage.getItem(slotKey(s))||'null');return o&&CLASSES[o.cls]?o:null}catch(e){return null}}
@@ -2816,7 +2757,7 @@ function begin(cls,carry){
   say('ป้ายเควสต์ (J) และช่างตีเหล็ก (H) อยู่ในเมือง • ทุกแมพมีบอสประจำถิ่น และมีมินิบอส/ฝูงบุกสุ่มเกิด','#ccc');updateTracker();
   clearInterval(saveTimer);saveTimer=setInterval(()=>save(false),8000);
 }
-const BUILD='v15 Map Editor มุมมองเกม 2D + วาง NPC/ร้านค้า (16 พ.ย.)';   // ถ้าหน้าเริ่มเกมไม่ขึ้นข้อความนี้ = เบราว์เซอร์ยังใช้ไฟล์เก่า กด Ctrl+F5
+const BUILD='v14 โหมดผู้มาเยือน (Guest) + กล้อง/ตัวละครเลื่อนลื่น (16 พ.ย.)';   // ถ้าหน้าเริ่มเกมไม่ขึ้นข้อความนี้ = เบราว์เซอร์ยังใช้ไฟล์เก่า กด Ctrl+F5
 // ลบตัวละครที่กำลังเล่น (ช่องว่างแล้วสร้างตัวใหม่ในช่องนั้นได้)
 async function deleteChar(){
   if(!P)return;
@@ -2895,7 +2836,7 @@ function loop(t){const now=Date.now(),gap=(now-lastWall)/1000;lastWall=now;
 })();
 </script>
 <!-- ฟีเจอร์เสริม: ต้องโหลดต่อจากสคริปต์หลักทันที (ประกาศ hook ทับก่อนเกมเริ่มทำงาน) -->
-<script src="f_audio_combat.js?v=8"></script>
+<script src="f_audio_combat.js?v=7"></script>
 <script src="f_rebirth.js?v=2"></script>
 <script src="f_smith2.js?v=1"></script>
 <script src="f_art2.js?v=7"></script>
@@ -2904,7 +2845,7 @@ function loop(t){const now=Date.now(),gap=(now-lastWall)/1000;lastWall=now;
 <script src="f_style.js?v=10"></script>
 <script src="f_depth.js?v=2"></script>
 <script src="f_life.js?v=6"></script>
-<script src="f_theme.js?v=4"></script>
+<script src="f_theme.js?v=3"></script>
 <script src="f_online.js?v=11"></script>
 <script src="f_chat.js?v=8"></script>
 <script src="f_guide.js?v=3"></script>
@@ -2917,6 +2858,5 @@ function loop(t){const now=Date.now(),gap=(now-lastWall)/1000;lastWall=now;
 <script src="f_manual.js?v=8"></script>
 <script src="f_summon.js?v=3"></script>
 <script src="f_25d.js?v=14"></script>
-<script src="f_mapedit.js?v=2"></script>
 </body>
 </html>
