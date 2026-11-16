@@ -2816,7 +2816,7 @@ function begin(cls,carry){
   say('ป้ายเควสต์ (J) และช่างตีเหล็ก (H) อยู่ในเมือง • ทุกแมพมีบอสประจำถิ่น และมีมินิบอส/ฝูงบุกสุ่มเกิด','#ccc');updateTracker();
   clearInterval(saveTimer);saveTimer=setInterval(()=>save(false),8000);
 }
-const BUILD='v14 ทวีปลอยฟ้า + โหมดไม่สมัคร (15 พ.ย.)';   // ถ้าหน้าเริ่มเกมไม่ขึ้นข้อความนี้ = เบราว์เซอร์ยังใช้ไฟล์เก่า กด Ctrl+F5
+const BUILD='v15 Map Editor มุมมองเกม 2D + วาง NPC/ร้านค้า (16 พ.ย.)';   // ถ้าหน้าเริ่มเกมไม่ขึ้นข้อความนี้ = เบราว์เซอร์ยังใช้ไฟล์เก่า กด Ctrl+F5
 // ลบตัวละครที่กำลังเล่น (ช่องว่างแล้วสร้างตัวใหม่ในช่องนั้นได้)
 async function deleteChar(){
   if(!P)return;
@@ -2917,6 +2917,6 @@ function loop(t){const now=Date.now(),gap=(now-lastWall)/1000;lastWall=now;
 <script src="f_manual.js?v=8"></script>
 <script src="f_summon.js?v=3"></script>
 <script src="f_25d.js?v=14"></script>
-<script src="f_mapedit.js?v=1"></script>
+<script src="f_mapedit.js?v=2"></script>
 </body>
 </html>
